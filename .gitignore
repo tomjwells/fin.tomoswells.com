@@ -58,7 +58,7 @@ yarn-error.log*
 .turbo
 
 
-
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
