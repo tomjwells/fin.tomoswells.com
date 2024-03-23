@@ -13,7 +13,7 @@ import { formatISO } from 'date-fns'
 
 
 
-export default function DatePickerDemo({ T }: {
+export default function SelectExpirationDate({ T }: {
   T: string
 }) {
   const router = useRouter()

@@ -2,8 +2,8 @@
 import * as React from "react";
 import { Flex, IconButton, Slider, TextField } from "@radix-ui/themes";
 
-const SLIDER_MIN: number = 0
-const SLIDER_MAX: number = 10
+const SLIDER_MIN = 0
+const SLIDER_MAX = 10
 
 export default function RiskFreeRateSlider({ defaultValue }: { defaultValue: number }) {
 

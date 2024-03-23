@@ -13,9 +13,9 @@ export default async function MPTPage({
   params: { slug: string };
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const selectedAssets = searchParams?.assets ? JSON.parse(searchParams.assets as string) : []
+  const selectedAssets = searchParams?.assets ? JSON.parse(searchParams.assets as string) as string[] : [] as string[]
   if (selectedAssets.length === 0) redirect(`/markowitz?assets=${JSON.stringify(["FB", "AAPL", "GOOGL", "AMZN", "MSFT"])}`)
-  const assets: Asset[] = await fetch(`${env.APP_URL}/api/markowitz/stocks`, { next: { revalidate: 3600 } }).then(r => r.json())
+  const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`, { next: { revalidate: 3600 } }).then(r => r.json()) as Asset[]
 
 
   return <Card className="w-full" style={{ backgroundColor: 'transparent' }} >
@@ -63,6 +63,6 @@ export default async function MPTPage({
 
 async function getRiskFreeRate(): Promise<number> {
   const response = await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } });
-  const data = await response.json();
+  const data = await response.json() as string
   return parseFloat(data);
 }

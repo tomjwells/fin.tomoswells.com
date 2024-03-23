@@ -6,13 +6,11 @@ import { useTransition } from "react"
 
 export default function SetStrike({
   optionType,
-  method,
   T,
   K,
   currentPrice
 }: {
   optionType: string,
-  method: string,
   T: string,
   K: number
   currentPrice: number

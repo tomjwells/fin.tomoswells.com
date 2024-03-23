@@ -8,6 +8,7 @@ import { Asset } from "../markowitz/fancy-multi-select";
 import SelectTicker from "./_components/SelectTicker";
 import { Suspense } from "react";
 import React from "react";
+import z from "zod"
 
 
 type Method = {
@@ -25,7 +26,17 @@ const METHODS: Method[] = [{
   value: "binomial"
 }]
 
-
+const pageParamsSchema = z.object({
+  optionType: z.union([
+    z.literal("american"),
+    z.literal("european"),
+  ]),
+  T: z.string().refine(
+    v => /\d{4}-\d{2}-\d{2}/.test(v),
+  ),
+  K: z.string(),
+  ticker: z.string(),
+})
 
 export default async function MPTPage({
   params,
@@ -40,9 +51,9 @@ export default async function MPTPage({
   if (!searchParams?.K) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=100`)
   if (!searchParams?.ticker) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=${searchParams.K || 100}&ticker=TSLA`)
 
-
+  const pageParams = pageParamsSchema.parse(searchParams)
   const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]
-  const methods = searchParams?.optionType === "european" ? METHODS : [METHODS[2]] as Method[];
+  const methods = pageParams.optionType === "european" ? METHODS : [METHODS[2]] as Method[];
 
 
 
@@ -66,26 +77,26 @@ export default async function MPTPage({
                 ...searchParams,
                 optionType: "european"
               }).toString()}`
-            } selected={searchParams?.optionType === "european"}>European Option</TabsTrigger>
+            } selected={pageParams.optionType === "european"}>European Option</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
       <Heading size="3" mb="2">Option parameters</Heading>
       <Flex gap="6" >
-        <SelectTicker ticker={searchParams?.ticker as string} assets={assets} />
-        <SelectExpirationDate
-          T={searchParams?.T as string}
-
-        />
-        <SetStrike
-          optionType={searchParams?.optionType as string}
-          method={searchParams?.method as string}
-          T={searchParams?.T as string}
-          K={parseFloat(searchParams?.K as string)}
-          currentPrice={
-            (await fetch(`${env.APP_URL}/api/stock/${searchParams?.ticker as string}`, { next: { revalidate: 60 } }).then(r => r.json())).price
-          }
-        />
+        <SelectTicker ticker={pageParams.ticker} assets={assets} />
+        <Suspense>
+          <SelectExpirationDate T={pageParams.T} />
+        </Suspense>
+        <Suspense>
+          <SetStrike
+            optionType={pageParams.optionType}
+            T={pageParams.T}
+            K={parseFloat(pageParams.K)}
+            currentPrice={
+              (await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price
+            }
+          />
+        </Suspense>
       </Flex>
 
 
@@ -100,10 +111,10 @@ export default async function MPTPage({
             <Heading size="4">Call Option</Heading>
             <Heading size="6">
               <Suspense fallback={<>Fetching...</>}>
-                <FetchOptionPrice optionType={searchParams?.optionType as "european" | "american"}
-                  T={searchParams?.T as string}
-                  K={searchParams?.K as string}
-                  ticker={searchParams?.ticker as string}
+                <FetchOptionPrice optionType={pageParams.optionType}
+                  T={pageParams.T}
+                  K={pageParams.K}
+                  ticker={pageParams.ticker}
                   method={value}
                   instrument="call"
                 />
@@ -114,10 +125,10 @@ export default async function MPTPage({
             <Heading size="4">Put Option</Heading>
             <Heading size="6">
               <Suspense fallback={<>Fetching...</>}>
-                <FetchOptionPrice optionType={searchParams?.optionType as "european" | "american"}
-                  T={searchParams?.T as string}
-                  K={searchParams?.K as string}
-                  ticker={searchParams?.ticker as string}
+                <FetchOptionPrice optionType={pageParams.optionType}
+                  T={pageParams.T}
+                  K={pageParams.K}
+                  ticker={pageParams.ticker}
                   method={value}
                   instrument="put"
                 />
@@ -174,7 +185,7 @@ async function fetchOptionPrice({
   ticker: string,
   method: "black-scholes" | "monte-carlo" | "binomial"
   instrument: "call" | "put",
-}) {
+}): Promise<number> {
   const requestParams = {
     optionType,
     T,
@@ -205,6 +216,6 @@ async function fetchOptionPrice({
         console.log("Error URL:", `${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(requestParams)}`)
       }
     }
-    return await res.json()
+    return await res.json() as number
   })
 }
