@@ -7,7 +7,6 @@ import SetStrike from "./_components/SetStrike";
 import { Asset } from "../markowitz/fancy-multi-select";
 import SelectTicker from "./_components/SelectTicker";
 import { Suspense } from "react";
-import Error from "./error";
 import React from "react";
 
 
@@ -33,7 +32,7 @@ export default async function MPTPage({
   searchParams,
 }: {
   params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
   // console.log({ params, searchParams })
   if (!searchParams?.optionType || searchParams?.optionType === "undefined") redirect(`/derivatives?optionType=american`)
@@ -43,7 +42,7 @@ export default async function MPTPage({
 
 
   const assets: Asset[] = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json())
-  const methods: Method[] = searchParams?.optionType === "european" ? METHODS : [METHODS[2]] as { label: string; value: "black-scholes" | "monte-carlo" | "binomial"; }[];
+  const methods: Method[] = searchParams?.optionType === "european" ? METHODS : [METHODS[2]] as Method[];
 
 
 

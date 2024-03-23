@@ -11,7 +11,7 @@ export default async function MPTPage({
   searchParams,
 }: {
   params: { slug: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
   const selectedAssets = searchParams?.assets ? JSON.parse(searchParams.assets as string) : []
   if (selectedAssets.length === 0) redirect(`/markowitz?assets=${JSON.stringify(["FB", "AAPL", "GOOGL", "AMZN", "MSFT"])}`)
@@ -23,8 +23,6 @@ export default async function MPTPage({
     <Flex direction="column" gap="2" my="4">
 
       <Heading size="3">Choose some assets to consider for your candidate portfolio.</Heading>
-      {/* Asset classes: Stocks, Cryptocurrency, Index funds, precious metals */}
-      {/* Note: Returns and volatility are calculated based on the entire history of the asset. This is a simplifying assumption and may not always hold in practice. */}
 
       <FancyMultiSelect
         assets={assets}
@@ -66,6 +64,5 @@ export default async function MPTPage({
 async function getRiskFreeRate(): Promise<number> {
   const response = await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } });
   const data = await response.json();
-  console.log({ data })
   return parseFloat(data);
 }
