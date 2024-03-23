@@ -13,8 +13,7 @@ export default async function MPTPage({
   params: { slug: string };
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const selectedAssets = searchParams?.assets ? JSON.parse(searchParams.assets) : []
-  // console.log({ selectedAssets })
+  const selectedAssets = searchParams?.assets ? JSON.parse(searchParams.assets as string) : []
   if (selectedAssets.length === 0) redirect(`/markowitz?assets=${JSON.stringify(["FB", "AAPL", "GOOGL", "AMZN", "MSFT"])}`)
   const assets: Asset[] = await fetch(`${env.APP_URL}/api/markowitz/stocks`, { next: { revalidate: 3600 } }).then(r => r.json())
 
@@ -29,7 +28,7 @@ export default async function MPTPage({
 
       <FancyMultiSelect
         assets={assets}
-        selected={selectedAssets.map(s => ({ value: s, label: s }))}
+        selected={selectedAssets.map((s: string) => ({ value: s, label: s }))}
       />
       <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is highlighted in lighter blue.</Text>
       <Text>By default the risk free rate is chosen based on three-month U.S. Treasury bill, but you can change it to any other rate.
