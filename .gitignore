@@ -222,3 +222,4 @@ cython_debug/
 #.idea/
 
 NOTES.txt
+speedtest.sh
