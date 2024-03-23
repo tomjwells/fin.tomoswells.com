@@ -17,6 +17,8 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    APP_URL: z.string().url(),
+    API_URL: z.string().url(),
   },
 
   /**
@@ -35,6 +37,8 @@ export const env = createEnv({
   runtimeEnv: {
     // DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    APP_URL: process.env.APP_URL,
+    API_URL: process.env.API_URL,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

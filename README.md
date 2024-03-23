@@ -1,11 +1,15 @@
 # Derivatives Valuation Model
 
 This toolkit provides a comprehensive suite of tools to price derivatives, specifically European options. The toolkit uses Monte Carlo simulations and the risk-neutral pricing method to accurately estimate option prices.
-## Structure
 
-Currently, all function definitions are implemented in the file `derivative_valuation.py`.
+# Repository Structure
 
-The file `run_examples.py` contains examples of pricing a European option using the Black-Scholes formula, Monte Carlo, and calculating the implied volatility.
+The repository is split into three directories serving different purposes. Understanding the structure will help you quickly find the code you are interested in.:
+
+1. `app` - Hosts the frontend for the application.
+2. `api` - A simple flask server acting as the backend for the application.
+3. `modules` - Contains the Python functions performing the financial calculations. These are important by the flask api.
+
 
 ## Features
 
@@ -17,13 +21,27 @@ The file `run_examples.py` contains examples of pricing a European option using 
 
 - **Implied Volatility**: The Newton-Raphson method is used in conjunction with the Black-Scholes formula to estimate the implied volatility of an asset.
 
-## Installation
+## Setup
 
-All Python dependencies can be readily installed with:
+It is worth noting that many generic tasks have aliases already created for them in the file `aliases.sh`. 
 
-```bash
-pip install -r requirements.txt
+To make these available in your shell, run
 ```
+source aliases.sh
+```
+
+### Setup Flask
+
+First, change directory to `/api`. From the `/api` directory, then run
+```pyenv```
+which will set up a new environment using `pip`.
+
+From the `/api` directory, the flask application may be run using
+```
+runflask
+```
+which causes it to be accessible on port `8000`.
+
 
 
 
