@@ -18,6 +18,11 @@ export default function TabsSelect() {
           </Tabs>
         </Suspense>
       </div>
+      <div className="flex justify-end">
+        <a href="https://github.com/tomjwells/finance" target="_blank" rel="noopener noreferrer">
+          <img src="/github-mark-white.svg" alt="GitHub Logo" className="h-8 w-8" />
+        </a>
+      </div>
     </header>
   )
 }

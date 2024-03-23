@@ -10,7 +10,7 @@ alias r="cd app && bun run dev && cd - || cd -"
 #############################################
 # Python
 #############################################
-alias pyenv="cd api && python3 -m venv env && source env/bin/activate && pip install -r requirements.txt && cd -"
+alias pyenv="python3 -m venv env && source env/bin/activate && pip3 install -r requirements.txt"
 # Run Flask application
 alias runflask="cd api && export FLASK_APP=index.py && export FLASK_ENV=development && flask run -p 8000 || cd -"
 
