@@ -1,7 +1,7 @@
 import { Card, Flex, Heading, Select, Slider, Text } from "@radix-ui/themes"
-import { env } from "env"
+import { env } from "~/src/env"
 import { redirect } from "next/navigation";
-import { Tabs, TabsList, TabsContent, TabsTrigger } from "shadcn/Tabs";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/src/shadcn/Tabs";
 import SelectExpirationDate from "./_components/SelectExpirationDate";
 import SetStrike from "./_components/SetStrike";
 import { Asset } from "../markowitz/fancy-multi-select";

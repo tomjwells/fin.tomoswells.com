@@ -1,6 +1,6 @@
 
 import { Suspense } from "react";
-import { Tabs, TabsList, TabsContent, TabsTrigger } from "shadcn/Tabs";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/src/shadcn/Tabs";
 
 export default function TabsSelect() {
   return (
