@@ -6,20 +6,21 @@ await import("./src/env.js");
 
 /** @type {import("next").NextConfig} */
 const config = {
-    rewrites: async () => {
-        return [
-            {
-                source: '/api/:path*',
-                destination:
-                    process.env.NODE_ENV === 'development'
-                        ? 'http://127.0.0.1:8000/api/:path*'
-                        : `${process.env.API_URL}/api/:path*`,
-            },
-        ]
-    },
-    // typescript: {
-    //     ignoreBuildErrors: true,
-    // },
+  rewrites: async () => {
+    return [
+      {
+        source: '/api/:path*',
+        destination:
+          process.env.NODE_ENV === 'development'
+            ? 'http://127.0.0.1:8000/api/:path*'
+            // : `${process.env.API_URL}/api/:path*`,
+            : `/api/`,
+      },
+    ]
+  },
+  // typescript: {
+  //     ignoreBuildErrors: true,
+  // },
 }
 
 export default config;

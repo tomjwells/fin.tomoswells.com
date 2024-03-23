@@ -47,7 +47,7 @@ export default async function MPTPage({
 }) {
   // console.log({ params, searchParams })
   if (!searchParams?.optionType || searchParams?.optionType === "undefined") redirect(`/derivatives?optionType=american`)
-  if (!searchParams?.T) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${new Date().getFullYear() + 1}-${new Date().getMonth()}-01`)
+  if (!searchParams?.T) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${new Date().getFullYear() + 1}-${new Date().getMonth().padStart(2, '0')}-01`)
   if (!searchParams?.K) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=100`)
   if (!searchParams?.ticker) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=${searchParams.K || 100}&ticker=TSLA`)
 
