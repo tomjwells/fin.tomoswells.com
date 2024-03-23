@@ -9,10 +9,10 @@ import pandas as pd
 from flask import jsonify, send_file
 import yfinance as yf
 import io
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
+# from matplotlib.ticker import FuncFormatter
 
 from typing import List
 
@@ -29,37 +29,37 @@ def hello_world():
 
 
 
-@app.route("/api/markowitz/main")
-def markowitz_main():
-  risk, returns = main(['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'])
+# @app.route("/api/markowitz/main")
+# def markowitz_main():
+#   risk, returns = main(['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'])
 
-  # Create a plot
-  plt.figure()
-  plt.plot(risk, returns) # Convert returns to percentage
-  plt.title('Markowitz Portfolio Optimization')
-  plt.xlabel('Risk')
-  plt.ylabel('Return (per annum)')
+#   # Create a plot
+#   plt.figure()
+#   plt.plot(risk, returns) # Convert returns to percentage
+#   plt.title('Markowitz Portfolio Optimization')
+#   plt.xlabel('Risk')
+#   plt.ylabel('Return (per annum)')
 
-  # Format y-ticks to be a percentage
-  formatter = FuncFormatter(lambda y, _: '{:.1%}'.format(y))
-  plt.gca().yaxis.set_major_formatter(formatter)
-  plt.gca().xaxis.set_major_formatter(formatter)
+#   # Format y-ticks to be a percentage
+#   formatter = FuncFormatter(lambda y, _: '{:.1%}'.format(y))
+#   plt.gca().yaxis.set_major_formatter(formatter)
+#   plt.gca().xaxis.set_major_formatter(formatter)
 
-  # Reduce the plot y-axis range
-  min_risk_index = risk.argmin()
-  min_risk_return_value = returns[min_risk_index]
-  EXTEND_Y_RANGE = 0.025
-  EXTEND_X_RANGE = 0.05
-  plt.ylim(2*min_risk_return_value-returns.max()-EXTEND_Y_RANGE, returns.max()+EXTEND_Y_RANGE)
-  plt.xlim(0, risk[-1]+EXTEND_X_RANGE)
+#   # Reduce the plot y-axis range
+#   min_risk_index = risk.argmin()
+#   min_risk_return_value = returns[min_risk_index]
+#   EXTEND_Y_RANGE = 0.025
+#   EXTEND_X_RANGE = 0.05
+#   plt.ylim(2*min_risk_return_value-returns.max()-EXTEND_Y_RANGE, returns.max()+EXTEND_Y_RANGE)
+#   plt.xlim(0, risk[-1]+EXTEND_X_RANGE)
 
-  # Save the plot to a bytes buffer
-  bytes_image = io.BytesIO()
-  plt.savefig(bytes_image, format='png')
-  bytes_image.seek(0)
+#   # Save the plot to a bytes buffer
+#   bytes_image = io.BytesIO()
+#   plt.savefig(bytes_image, format='png')
+#   bytes_image.seek(0)
 
-  # Return the plot as a PNG image
-  return send_file(bytes_image, mimetype='image/png')
+#   # Return the plot as a PNG image
+#   return send_file(bytes_image, mimetype='image/png')
 
 @app.route("/api/markowitz/stocks")
 def markowitz_stocks():
