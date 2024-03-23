@@ -15,19 +15,10 @@ import { formatISO } from 'date-fns'
 
 export default function DatePickerDemo({ T }: {
   T: string
-
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  function selectDate(date: Date) {
-    router.push(
-      `?${new URLSearchParams({
-        ...Object.fromEntries(searchParams),
-        T: formatISO(date, { representation: 'date' }),
-      }).toString()}`
-    )
-  }
+  const date = T ? new Date(T) : new Date()
 
   return (
     <Flex direction="column" gap="2">
@@ -48,8 +39,13 @@ export default function DatePickerDemo({ T }: {
         <PopoverContent className="w-auto p-0">
           <Calendar
             mode="single"
-            selected={T}
-            onSelect={selectDate}
+            selected={date}
+            onSelect={(date) => date && router.push(
+              `?${new URLSearchParams({
+                ...Object.fromEntries(searchParams),
+                T: formatISO(date, { representation: 'date' }),
+              }).toString()}`
+            )}
             initialFocus
             disabled={{ from: new Date(1970, 1, 1), to: new Date() }}
           />
