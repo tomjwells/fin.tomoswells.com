@@ -41,8 +41,8 @@ export default async function MPTPage({
   if (!searchParams?.ticker) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=${searchParams.K || 100}&ticker=TSLA`)
 
 
-  const assets: Asset[] = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json())
-  const methods: Method[] = searchParams?.optionType === "european" ? METHODS : [METHODS[2]] as Method[];
+  const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]
+  const methods = searchParams?.optionType === "european" ? METHODS : [METHODS[2]] as Method[];
 
 
 
@@ -93,7 +93,7 @@ export default async function MPTPage({
 
       <Heading size="5">Results</Heading>
 
-      {methods.map(async ({ label, value }) => <div className="flex flex-col gap-4">
+      {methods.map(async ({ label, value }) => <div key={label} className="flex flex-col gap-4">
         <Heading size="4">{label}</Heading>
         <div className="flex gap-4">
           <div className="w-1/2">
