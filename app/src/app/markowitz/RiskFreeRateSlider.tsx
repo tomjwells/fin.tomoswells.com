@@ -8,18 +8,12 @@ const SLIDER_MAX: number = 10
 export default function RiskFreeRateSlider({ defaultValue }: { defaultValue: number }) {
 
 
-    const [value, setValue] = React.useState(defaultValue);
+    const [value, setValue] = React.useState<number>(defaultValue);
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = parseFloat(e.target.value);
-        console.log({ newValue })
         if (!isNaN(newValue)) {
             setValue(newValue);
         }
-    };
-
-    const handleSliderChange = (value: number[]) => {
-        console.log({ value })
-        setValue(value[0] / (SLIDER_MAX - SLIDER_MIN));
     };
 
     return (
@@ -39,10 +33,9 @@ export default function RiskFreeRateSlider({ defaultValue }: { defaultValue: num
             <Slider
                 defaultValue={[value * (SLIDER_MAX - SLIDER_MIN)]}
                 value={[value * (SLIDER_MAX - SLIDER_MIN)]}
-                // onChange={handleSliderChange}
                 style={{ width: 300 }}
                 draggable
-                onValueChange={handleSliderChange}
+                onValueChange={(value) => value[0] && setValue(value[0] / (SLIDER_MAX - SLIDER_MIN))}
             />
         </Flex>
     );
