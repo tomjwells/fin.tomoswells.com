@@ -104,39 +104,41 @@ export default async function MPTPage({
 
       <Heading size="5">Results</Heading>
 
-      {methods.map(async ({ label, value }) => <div key={label} className="flex flex-col gap-4">
-        <Heading size="4">{label}</Heading>
-        <div className="flex gap-4">
-          <div className="w-1/2">
-            <Heading size="4">Call Option</Heading>
-            <Heading size="6">
-              <Suspense fallback={<>Fetching...</>}>
-                <FetchOptionPrice optionType={pageParams.optionType}
-                  T={pageParams.T}
-                  K={pageParams.K}
-                  ticker={pageParams.ticker}
-                  method={value}
-                  instrument="call"
-                />
-              </Suspense>
-            </Heading>
-          </div>
-          <div className="w-1/2">
-            <Heading size="4">Put Option</Heading>
-            <Heading size="6">
-              <Suspense fallback={<>Fetching...</>}>
-                <FetchOptionPrice optionType={pageParams.optionType}
-                  T={pageParams.T}
-                  K={pageParams.K}
-                  ticker={pageParams.ticker}
-                  method={value}
-                  instrument="put"
-                />
-              </Suspense>
-            </Heading>
+      {methods.map(async ({ label, value }) => (
+        <div key={label} className="flex flex-col gap-4">
+          <Heading size="4">{label}</Heading>
+          <div className="flex gap-4">
+            <div className="w-1/2">
+              <Heading size="4">Call Option</Heading>
+              <Heading size="6">
+                <Suspense fallback={<>Fetching...</>}>
+                  <FetchOptionPrice optionType={pageParams.optionType}
+                    T={pageParams.T}
+                    K={pageParams.K}
+                    ticker={pageParams.ticker}
+                    method={value}
+                    instrument="call"
+                  />
+                </Suspense>
+              </Heading>
+            </div>
+            <div className="w-1/2">
+              <Heading size="4">Put Option</Heading>
+              <Heading size="6">
+                <Suspense fallback={<>Fetching...</>}>
+                  <FetchOptionPrice optionType={pageParams.optionType}
+                    T={pageParams.T}
+                    K={pageParams.K}
+                    ticker={pageParams.ticker}
+                    method={value}
+                    instrument="put"
+                  />
+                </Suspense>
+              </Heading>
+            </div>
           </div>
         </div>
-      </div>
+      )
       )}
     </Flex>
 
