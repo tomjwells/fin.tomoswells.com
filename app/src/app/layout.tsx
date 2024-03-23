@@ -6,7 +6,7 @@ import "@radix-ui/themes/styles.css"
 
 import { Container, Flex, Theme, ThemePanel } from "@radix-ui/themes"
 import TabsSelect from "./Nav";
-import { Toaster } from "~/src/shadcn/Sonner";
+import { Toaster } from "~/shadcn/Sonner";
 export const runtime = "edge"
 
 const inter = Inter({

@@ -1,7 +1,7 @@
 import { Card, Flex, Heading, Slider, Text } from "@radix-ui/themes"
 import { FancyMultiSelect } from "./fancy-multi-select"
 import type { Asset } from "./fancy-multi-select"
-import { env } from "~/src/env"
+import { env } from "~/env"
 import { redirect } from "next/navigation";
 import RiskFreeRateSlider from "./RiskFreeRateSlider";
 

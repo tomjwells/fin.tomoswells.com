@@ -1,7 +1,7 @@
 "use client"
 import { Flex, Select, TextField } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
-import type { Asset } from "~/src/app/markowitz/fancy-multi-select";
+import type { Asset } from "~/app/markowitz/fancy-multi-select";
 
 export default function SelectTicker({ ticker, assets }: {
     ticker: string;

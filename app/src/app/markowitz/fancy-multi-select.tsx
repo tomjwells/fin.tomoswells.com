@@ -8,10 +8,10 @@ import {
   Command,
   CommandGroup,
   CommandItem,
-} from "~/src/shadcn/Command";
+} from "~/shadcn/Command";
 
 import { Command as CommandPrimitive } from "cmdk";
-import { Badge } from "~/src/shadcn/Badge";
+import { Badge } from "~/shadcn/Badge";
 import { useRouter } from "next/navigation";
 
 export type Asset = Record<"value" | "label", string>;
