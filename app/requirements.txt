@@ -2,9 +2,9 @@ Flask==3.0.2
 Flask-Caching==2.1.0
 
 # Derivatives
-numpy==1.26.4
+# numpy==1.26.4
 # pandas==2.2.1 # Pandas available by default in AWS Lambda
-pandas-stubs==2.2.0.240218
+# pandas-stubs==2.2.0.240218
 yfinance==0.2.37
 matplotlib==3.8.3
 
