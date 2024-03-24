@@ -1,8 +1,9 @@
-import { Card, Flex, Heading, Slider, Text } from "@radix-ui/themes"
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { Card, Flex, Heading, Text } from "@radix-ui/themes"
 import { FancyMultiSelect } from "./fancy-multi-select"
 import type { Asset } from "./fancy-multi-select"
 import { env } from "~/env"
-import { redirect } from "next/navigation";
 import RiskFreeRateSlider from "./RiskFreeRateSlider";
 
 
@@ -18,7 +19,7 @@ export default async function MPTPage({
   const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`, { next: { revalidate: 3600 } }).then(r => r.json()) as Asset[]
 
 
-  return <Card className="w-full" style={{ backgroundColor: 'transparent' }} >
+  return <Card className="w-full before:![background-color:transparent] p-5"  >
     <Heading size="6">Modern Portfolio Theory</Heading>
     <Flex direction="column" gap="2" my="4">
 
@@ -29,10 +30,14 @@ export default async function MPTPage({
         selected={selectedAssets.map((s: string) => ({ value: s, label: s }))}
       />
       <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is highlighted in lighter blue.</Text>
-      <Text>By default the risk free rate is chosen based on three-month U.S. Treasury bill, but you can change it to any other rate.
 
-      </Text>
-      <RiskFreeRateSlider defaultValue={100 * (await getRiskFreeRate())} />
+
+      <Suspense>
+        <div className="my-4">
+          <RiskFreeRateSlider defaultValue={100 * (await getRiskFreeRate())} />
+          <Text size="2">The default value for risk free rate is chosen to be three-month U.S. Treasury bill, but you can change it to any other rate.</Text>
+        </div>
+      </Suspense>
 
       <Heading size="3">Results</Heading>
       <div className="flex flex-col gap-4">
@@ -62,7 +67,5 @@ export default async function MPTPage({
 }
 
 async function getRiskFreeRate(): Promise<number> {
-  const response = await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } });
-  const data = await response.json() as string
-  return parseFloat(data);
+  return parseFloat(((await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } }).then(r => r.json()))).toFixed(2))
 }

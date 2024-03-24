@@ -103,7 +103,7 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
             onValueChange={setInputValue}
             onBlur={() => setOpen(false)}
             onFocus={() => setOpen(true)}
-            placeholder="Select frameworks..."
+            placeholder="Select assets..."
             className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1"
           />
         </div>
@@ -112,22 +112,22 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
         {open && selectables.length > 0 ?
           <div className="absolute w-full z-10 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
             <CommandGroup className="h-full overflow-auto">
-              {selectables.map((framework) => {
+              {selectables.map((asset) => {
                 return (
                   <CommandItem
-                    key={framework.value}
+                    key={asset.value}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                     }}
                     onSelect={(value) => {
                       setInputValue("")
-                      setSelected(prev => [...prev, framework])
-                      // router.push("/markowitz?assets=" + JSON.stringify([...selected, framework].map(s => s.value)))
+                      setSelected(prev => [...prev, asset])
+                      // router.push("/markowitz?assets=" + JSON.stringify([...selected, asset].map(s => s.value)))
                     }}
                     className={"cursor-pointer"}
                   >
-                    {framework.label}
+                    {asset.label}
                   </CommandItem>
                 );
               })}

@@ -1,4 +1,4 @@
-import { Card, Flex, Heading, Select, Slider, Text } from "@radix-ui/themes"
+import { Card, Flex, Grid, Heading, Select, Skeleton, Spinner, Text } from "@radix-ui/themes"
 import { env } from "~/env"
 import { redirect } from "next/navigation";
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs";
@@ -9,6 +9,7 @@ import SelectTicker from "./_components/SelectTicker";
 import { Suspense } from "react";
 import React from "react";
 import z from "zod"
+
 
 
 type Method = {
@@ -58,7 +59,7 @@ export default async function MPTPage({
 
 
 
-  return <Card className="w-full" style={{ backgroundColor: 'transparent' }} >
+  return <Card className="w-full before:![background-color:transparent] p-6" >
     <Heading size="6">Options Pricing</Heading>
     <Flex direction="column" gap="2" my="4">
 
@@ -82,8 +83,10 @@ export default async function MPTPage({
         </Tabs>
       </div>
       <Heading size="3" mb="2">Option parameters</Heading>
-      <Flex gap="6" >
-        <SelectTicker ticker={pageParams.ticker} assets={assets} />
+      <Grid columns="3" gap="3" width="auto">
+        <Suspense>
+          <SelectTicker ticker={pageParams.ticker} assets={assets} />
+        </Suspense>
         <Suspense>
           <SelectExpirationDate T={pageParams.T} />
         </Suspense>
@@ -97,21 +100,27 @@ export default async function MPTPage({
             }
           />
         </Suspense>
-      </Flex>
+      </Grid>
 
-
-      <Text my="3">The risk free rate used for the calculation is that of the three-month U.S. Treasury bill (r={(100 * (await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 60 } }).then(r => r.json()))).toFixed(2)}%).</Text>
+      <ul className="list-disc my-6 ml-6">
+        <li >
+          The list of selectable companies is based on the S&P 500 index.
+        </li>
+        <li >
+          <Text>The risk free rate used for the calculation is that of the three-month U.S. Treasury bill (currently: r={(100 * (await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } }).then(r => r.json()))).toFixed(2)}%).</Text>
+        </li>
+      </ul>
 
       <Heading size="5">Results</Heading>
 
       {methods.map(async ({ label, value }) => (
-        <div key={label} className="flex flex-col gap-4">
-          <Heading size="4">{label}</Heading>
+        <div key={label} className="flex flex-col gap-4 my-2">
+          <Heading size="4" weight="bold">{label}</Heading>
           <div className="flex gap-4">
             <div className="w-1/2">
-              <Heading size="4">Call Option</Heading>
+              <Heading size="4" color="gray">Call Option</Heading>
               <Heading size="6">
-                <Suspense fallback={<>Fetching...</>}>
+                <Suspense fallback={<Skeleton>Loading</Skeleton>}>
                   <FetchOptionPrice optionType={pageParams.optionType}
                     T={pageParams.T}
                     K={pageParams.K}
@@ -123,9 +132,9 @@ export default async function MPTPage({
               </Heading>
             </div>
             <div className="w-1/2">
-              <Heading size="4">Put Option</Heading>
+              <Heading size="4" color="gray">Put Option</Heading>
               <Heading size="6">
-                <Suspense fallback={<>Fetching...</>}>
+                <Suspense fallback={<Skeleton>Loading</Skeleton>}>
                   <FetchOptionPrice optionType={pageParams.optionType}
                     T={pageParams.T}
                     K={pageParams.K}

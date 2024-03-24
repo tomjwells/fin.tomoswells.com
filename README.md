@@ -1,48 +1,53 @@
-# Derivatives Valuation Model
+# Financial Mathematics Toolkit
 
-This toolkit provides a comprehensive suite of tools to price derivatives, specifically European options. The toolkit uses Monte Carlo simulations and the risk-neutral pricing method to accurately estimate option prices.
+A collection of tools I have made while studying financial mathematics.
+
+The goal is to produce a collection of demos based on the different models and techniques, which can be tried out and tested at [fin.tomoswells.com](https://fin.tomoswells.com)
 
 # Repository Structure
 
 The repository is split into three directories serving different purposes. Understanding the structure will help you quickly find the code you are interested in.:
 
-1. `app` - Hosts the frontend for the application.
-2. `api` - A simple flask server acting as the backend for the application.
-3. `modules` - Contains the Python functions performing the financial calculations. These are important by the flask api.
+1. `modules` - Contains the Python functions implementing the financial calculations.
+1. `app` - Hosts a Next.js frontend for the application.
+2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
 
+# Topics
 
-## Features
+## Options Pricing
+
+Options pricing is implemented using the Black-Scholes model, a monte-carlo model and a binomial tree model. All three methods are applied to pricing European options, and only the binomial model is applied to pricing American options since American options are path dependent.
 
 - **Monte Carlo Simulations**: This method involves running a large number of trials to model the price of an underlying asset, taking into account factors such as volatility and time to expiration. 
 
-- **Risk-Neutral Pricing**: This is a method used to price derivatives when the risk-free rate is known. It assumes that the expected return of the underlying asset is the risk-free rate.
-
-- **European Options**: The toolkit can price both European options, which can only be exercised at expiration
-
 - **Implied Volatility**: The Newton-Raphson method is used in conjunction with the Black-Scholes formula to estimate the implied volatility of an asset.
 
-## Setup
+# Running the Project
 
-It is worth noting that many generic tasks have aliases already created for them in the file `aliases.sh`. 
+It is worth noting that many generic tasks have aliases already created for them, in the file `aliases.sh`. 
 
 To make these available in your shell, run
 ```
 source aliases.sh
 ```
 
-### Setup Flask
+In general these aliased commands can involve changing the directory, so it is best to run them from the root of the project if unsure.
 
-First, change directory to `/api`. From the `/api` directory, then run
+## Flask
+
+To install the Python dependencies, use the alias
 ```pyenv```
 which will set up a new environment using `pip`.
 
-From the `/api` directory, the flask application may be run using
+The flask application may be run using
 ```
 runflask
 ```
 which causes it to be accessible on port `8000`.
 
+## Next.js
 
+Bun is used as the package manager. To install dependencies use the alias `i`. To run Next, use the alias `r`.
 
 
 

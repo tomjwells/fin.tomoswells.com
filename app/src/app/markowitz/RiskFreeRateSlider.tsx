@@ -7,23 +7,21 @@ const SLIDER_MAX = 10
 
 export default function RiskFreeRateSlider({ defaultValue }: { defaultValue: number }) {
 
-
   const [value, setValue] = React.useState<number>(defaultValue);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
     if (!isNaN(newValue)) {
       setValue(newValue);
     }
-  };
+  }
 
   return (
     <Flex direction="row" align="center" gap="4">
-
-      <TextField.Root>
+      <TextField.Root size="2" value={value.toFixed(2)} onChange={handleInputChange} type="number">
         <TextField.Slot>
-          r_f
+          r
         </TextField.Slot>
-        <TextField.Input size="2" value={value.toFixed(2)} onChange={handleInputChange} type="number" />
+        {/* <TextField.Input  /> */}
         <TextField.Slot>
           <IconButton size="1" variant="ghost">
             %
@@ -31,6 +29,7 @@ export default function RiskFreeRateSlider({ defaultValue }: { defaultValue: num
         </TextField.Slot>
       </TextField.Root>
       <Slider
+        variant="classic"
         defaultValue={[value * (SLIDER_MAX - SLIDER_MIN)]}
         value={[value * (SLIDER_MAX - SLIDER_MIN)]}
         style={{ width: 300 }}
@@ -38,5 +37,5 @@ export default function RiskFreeRateSlider({ defaultValue }: { defaultValue: num
         onValueChange={(value) => value[0] && setValue(value[0] / (SLIDER_MAX - SLIDER_MIN))}
       />
     </Flex>
-  );
+  )
 }

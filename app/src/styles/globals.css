@@ -2,7 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Set global background colour to #111113 */
 
+:root {
+  background-color: #111113;
+}
+.radix-themes {
+  --color-background: #111113;
+}
 
 @layer base {
     :root {

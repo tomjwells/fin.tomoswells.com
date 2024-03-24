@@ -65,6 +65,7 @@ def hello_world():
 #   return send_file(bytes_image, mimetype='image/png')
 
 @app.route("/api/markowitz/stocks")
+@cache.memoize(timeout=timeout)
 def markowitz_stocks():
   tickers = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
   tickers_list: List[str] = tickers['Symbol'].to_list()

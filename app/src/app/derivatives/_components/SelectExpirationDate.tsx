@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/shadcn/Popover"
 import { Button } from "~/shadcn/Button"
 import cn from "~/shadcn/cn"
 import { Calendar } from "~/shadcn/Calendar"
-import { Flex } from "@radix-ui/themes"
+import { Box, Flex } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
 import { formatISO } from 'date-fns'
 
@@ -28,7 +28,7 @@ export default function SelectExpirationDate({ T }: {
           <Button
             variant={"outline"}
             className={cn(
-              "w-[280px] justify-start text-left font-normal",
+              "w-min justify-start text-left font-normal",
               !T && "text-muted-foreground"
             )}
           >

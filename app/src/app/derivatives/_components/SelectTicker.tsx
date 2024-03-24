@@ -24,7 +24,7 @@ export default function SelectTicker({ ticker, assets }: {
                     )
                 }}
             >
-                <Select.Trigger />
+                <Select.Trigger className="w-36" />
                 <Select.Content>
                     <Select.Group>
                         {
