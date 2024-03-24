@@ -5,24 +5,24 @@ import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs";
 
 export default function TabsSelect() {
   return (
-    <header className={`flex w-full flex-row justify-center`}>
-      <div className=" container mx-16 flex h-20 items-center justify-between py-6 sm:mx-16 md:mx-24 md:max-w-2xl lg:mx-56 lg:max-w-5xl">
+    <header className={`flex w-full flex-col-reverse sm:flex-row justify-center`}>
+      <div className=" container mx-0 flex sm:h-20 items-center justify-center sm:justify-between py-6 sm:mx-16 md:mx-24 md:max-w-2xl lg:mx-56 lg:max-w-5xl">
         <Suspense>
-          <Tabs defaultValue="account" className="w-[400px]">
-            <TabsList>
-              <TabsTrigger value="/"><HomeIcon /></TabsTrigger>
-              <TabsTrigger value="/derivatives">Options Pricing</TabsTrigger>
-              <TabsTrigger value="/markowitz">Modern Portfolio Theory</TabsTrigger>
-              <TabsTrigger value="/timeseries">Timeseries Forecasting</TabsTrigger>
+          <Tabs defaultValue="/" >
+            <TabsList className="flex-col sm:flex-row h-auto sm:h-9 gap-1.5 sm:gap-0">
+              <TabsTrigger value="/" className="w-full sm:w-auto"><HomeIcon /></TabsTrigger>
+              <TabsTrigger value="/derivatives" className="w-full sm:w-auto">Options Pricing</TabsTrigger>
+              <TabsTrigger value="/markowitz" className="w-full sm:w-auto">Modern Portfolio Theory</TabsTrigger>
+              <TabsTrigger value="/timeseries" className="w-full sm:w-auto">Timeseries Forecasting</TabsTrigger>
             </TabsList>
             {/* <TabsContent value="account">Make changes to your account here.</TabsContent> */}
             {/* <TabsContent value="password">Change your password here.</TabsContent> */}
           </Tabs>
         </Suspense>
       </div>
-      <div className="flex justify-end">
+      <div className="flex justify-center sm:justify-end sm:mr-20">
         <a href="https://github.com/tomjwells/finance" target="_blank" rel="noopener noreferrer">
-          <img src="/github-mark-white.svg" alt="GitHub Logo" className="h-8 w-8" />
+          <img src="/github-mark-white.svg" alt="GitHub Logo" className="h-8 w-8 min-w-8" />
         </a>
       </div>
     </header>

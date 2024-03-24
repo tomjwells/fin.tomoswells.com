@@ -83,7 +83,10 @@ export default async function MPTPage({
         </Tabs>
       </div>
       <Heading size="3" mb="2">Option parameters</Heading>
-      <Grid columns="3" gap="3" width="auto">
+      <Grid columns={{
+        initial: "1",
+        sm: "3"
+      }} gap="3" width="auto">
         <Suspense>
           <SelectTicker ticker={pageParams.ticker} assets={assets} />
         </Suspense>

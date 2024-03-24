@@ -30,7 +30,7 @@ export default function RootLayout({
       <body className={`font-sans ${inter.variable}`}>
         <Theme appearance="dark">
           <div className="flex min-h-screen flex-col">
-            <header className="py-8" />
+            <span className="py-4 sm:py-8" />
             <TabsSelect />
             <main className="flex-1">
               <Container size="3" p="2">
