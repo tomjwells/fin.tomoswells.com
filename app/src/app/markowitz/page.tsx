@@ -67,5 +67,5 @@ export default async function MPTPage({
 }
 
 async function getRiskFreeRate(): Promise<number> {
-  return parseFloat(((await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } }).then(r => r.json()))).toFixed(2))
+  return parseFloat(((await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 3600 } }).then(r => r.json())) as number).toFixed(2))
 }

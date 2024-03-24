@@ -1,16 +1,17 @@
 # Financial Mathematics Toolkit
 
-A collection of tools I have made while studying financial mathematics.
+A collection of tools I have produced while studying financial mathematics.
 
 The goal is to produce a collection of demos based on the different models and techniques, which can be tried out and tested at [fin.tomoswells.com](https://fin.tomoswells.com)
 
 # Repository Structure
 
-The repository is split into three directories serving different purposes. Understanding the structure will help you quickly find the code you are interested in.:
+The repository is split into three directories serving different purposes. Understanding the structure will help you quickly find any code you are interested in:
 
 1. `modules` - Contains the Python functions implementing the financial calculations.
 1. `app` - Hosts a Next.js frontend for the application.
 2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
+2. `math` - Contains pdfs explaining any maths I consider "non-obvious" which is implemented in the code.
 
 # Topics
 
