@@ -10,6 +10,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  ScatterController
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 ChartJS.register(
@@ -19,7 +20,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ScatterController
 );
 
 export default function ChartJSChart({ mptData, riskFreeRate }: { mptData: MPTData; riskFreeRate: number }) {
