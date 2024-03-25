@@ -1,17 +1,17 @@
 # Financial Mathematics Toolkit
 
-A collection of tools I have produced while studying financial mathematics.
+A collection of tools I have created while studying financial mathematics.
 
-The goal is to produce a collection of demos based on the different models and techniques, which can be tried out and tested at [fin.tomoswells.com](https://fin.tomoswells.com)
+The goal is to produce a collection of live demos based on the different models and techniques, which can be tried out and tested at [fin.tomoswells.com](https://fin.tomoswells.com)
 
 # Repository Structure
 
-The repository is split into three directories serving different purposes. Understanding the structure will help you quickly find any code you are interested in:
+Each subdirectory serves a different purpose. Understanding the structure will help you quickly find any code you are interested in:
 
 1. `modules` - Contains the Python functions implementing the financial calculations.
 1. `app` - Hosts a Next.js frontend for the application.
 2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
-2. `math` - Contains pdfs explaining any maths I consider "non-obvious" which is implemented in the code.
+2. `math` - Contains pdfs explaining any mathematics I consider "non-obvious", which is implemented in the code.
 
 # Topics
 
@@ -22,6 +22,10 @@ Options pricing is implemented using the Black-Scholes model, a monte-carlo mode
 - **Monte Carlo Simulations**: This method involves running a large number of trials to model the price of an underlying asset, taking into account factors such as volatility and time to expiration. 
 
 - **Implied Volatility**: The Newton-Raphson method is used in conjunction with the Black-Scholes formula to estimate the implied volatility of an asset.
+
+## Modern Portfolio Theory
+
+Harry Markowitz's Modern Portfolio Theory is a model that provides a way of defining portfolios that are *efficient*. An eficient potfolio is one that has the highest reward for a given level of risk. This tool calculates the frontier of efficient portfolios from a user-selectable basket of equities.
 
 # Running the Project
 

@@ -1,10 +1,10 @@
-import { Card, Flex, Grid, Heading, Select, Skeleton, Spinner, Text } from "@radix-ui/themes"
+import { Box, Card, Flex, Grid, Heading, Select, Skeleton, Spinner, Text } from "@radix-ui/themes"
 import { env } from "~/env"
 import { redirect } from "next/navigation";
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs";
 import SelectExpirationDate from "./_components/SelectExpirationDate";
 import SetStrike from "./_components/SetStrike";
-import { Asset } from "../markowitz/fancy-multi-select";
+import { Asset } from "../markowitz/_components/fancy-multi-select";
 import SelectTicker from "./_components/SelectTicker";
 import { Suspense } from "react";
 import React from "react";
@@ -32,25 +32,27 @@ const pageParamsSchema = z.object({
     z.literal("american"),
     z.literal("european"),
   ]),
-  T: z.string().refine(
-    v => /\d{4}-\d{2}-\d{2}/.test(v),
-  ),
-  K: z.string(),
+  T: z.string().refine(v => /\d{4}-\d{2}-\d{2}/.test(v)),
+  K: z.string().refine(v => /^\d+(\.\d+)?$/.test(v)),
   ticker: z.string(),
 })
+export type PageParams = z.infer<typeof pageParamsSchema>
 
 export default async function MPTPage({
   params,
   searchParams,
 }: {
   params: { slug: string };
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams: Record<string, string | string[] | undefined>
 }) {
-  // console.log({ params, searchParams })
-  if (!searchParams?.optionType || searchParams?.optionType === "undefined") redirect(`/derivatives?optionType=american`)
-  if (!searchParams?.T) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${new Date().getFullYear() + 1}-${new Date().getMonth().toString().padStart(2, '0')}-01`)
-  if (!searchParams?.K) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=100`)
-  if (!searchParams?.ticker) redirect(`/derivatives?optionType=${searchParams.optionType}&T=${searchParams.T || 1}&K=${searchParams.K || 100}&ticker=TSLA`)
+  // Validate query params
+  if (!pageParamsSchema.safeParse(searchParams).success) redirect(`?${new URLSearchParams({
+    optionType: pageParamsSchema.shape.optionType.safeParse(searchParams.optionType).success ? searchParams?.optionType as PageParams["optionType"] : "american",
+    T: pageParamsSchema.shape.T.safeParse(searchParams.T).success ? searchParams?.T as PageParams["T"] : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
+    K: pageParamsSchema.shape.K.safeParse(searchParams.K).success ? searchParams?.K as PageParams["K"] : '100',
+    ticker: pageParamsSchema.shape.ticker.safeParse(searchParams.ticker).success ? searchParams?.ticker as PageParams["ticker"] : 'TSLA',
+  })}`)
+
 
   const pageParams = pageParamsSchema.parse(searchParams)
   const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]
@@ -71,36 +73,29 @@ export default async function MPTPage({
               `/derivatives?${new URLSearchParams({
                 ...searchParams,
                 optionType: "american"
-              }).toString()}`
+              })}`
             } selected={searchParams?.optionType === "american"}>American Option</TabsTrigger>
             <TabsTrigger value={
               `/derivatives?${new URLSearchParams({
                 ...searchParams,
                 optionType: "european"
-              }).toString()}`
+              })}`
             } selected={pageParams.optionType === "european"}>European Option</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
       <Heading size="3" mb="2">Option parameters</Heading>
-      <Grid columns={{
-        initial: "1",
-        sm: "3"
-      }} gap="3" width="auto">
+      <Grid columns={{ initial: "1", sm: "3" }} gap="3" width="auto">
         <Suspense>
-          <SelectTicker ticker={pageParams.ticker} assets={assets} />
+          <SelectTicker pageParams={pageParams} assets={assets} />
         </Suspense>
         <Suspense>
-          <SelectExpirationDate T={pageParams.T} />
+          <SelectExpirationDate pageParams={pageParams} />
         </Suspense>
         <Suspense>
           <SetStrike
-            optionType={pageParams.optionType}
-            T={pageParams.T}
-            K={parseFloat(pageParams.K)}
-            currentPrice={
-              (await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price
-            }
+            pageParams={pageParams}
+            currentPrice={(await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price}
           />
         </Suspense>
       </Grid>
@@ -118,19 +113,23 @@ export default async function MPTPage({
 
       {methods.map(async ({ label, value }) => (
         <div key={label} className="flex flex-col gap-4 my-2">
-          <Heading size="4" weight="bold">{label}</Heading>
+          <span className="flex flex-col gap-1 w-fit">
+            <Heading size="4" weight="bold" className="w-fit">{label}</Heading>
+            {/* <div class="rt-Box" style="height: 1px; background-image: linear-gradient(to right, transparent, var(--gray-a8) 30%, var(--gray-a8) 70%, transparent);"></div> */}
+            <Box
+              style={{
+                // width: "130px",
+                height: "1px",
+                backgroundImage: "linear-gradient(to right, transparent, var(--gray-a5) 30%, var(--gray-a5) 70%, transparent)",
+              }}
+            />
+          </span>
           <div className="flex gap-4">
             <div className="w-1/2">
               <Heading size="4" color="gray">Call Option</Heading>
               <Heading size="6">
                 <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-                  <FetchOptionPrice optionType={pageParams.optionType}
-                    T={pageParams.T}
-                    K={pageParams.K}
-                    ticker={pageParams.ticker}
-                    method={value}
-                    instrument="call"
-                  />
+                  <FetchOptionPrice pageParams={pageParams} method={value} instrument="call" />
                 </Suspense>
               </Heading>
             </div>
@@ -138,13 +137,7 @@ export default async function MPTPage({
               <Heading size="4" color="gray">Put Option</Heading>
               <Heading size="6">
                 <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-                  <FetchOptionPrice optionType={pageParams.optionType}
-                    T={pageParams.T}
-                    K={pageParams.K}
-                    ticker={pageParams.ticker}
-                    method={value}
-                    instrument="put"
-                  />
+                  <FetchOptionPrice pageParams={pageParams} method={value} instrument="put" />
                 </Suspense>
               </Heading>
             </div>
@@ -157,54 +150,28 @@ export default async function MPTPage({
   </Card >
 }
 
-async function FetchOptionPrice({
-  optionType,
-  T,
-  K,
-  ticker,
-  method,
-  instrument,
-}: {
-  optionType: "european" | "american",
-  T: string,
-  K: string,
-  ticker: string
+async function FetchOptionPrice(props: {
+  pageParams: PageParams,
   method: "black-scholes" | "monte-carlo" | "binomial"
   instrument: "call" | "put",
 }) {
-  const optionPrice = await fetchOptionPrice({
-    optionType,
-    T,
-    K,
-    ticker,
-    method,
-    instrument
-  })
+  const optionPrice = await fetchOptionPrice(props)
   return <>
     ${optionPrice.toFixed(2)}
   </>
 }
 
 async function fetchOptionPrice({
-  optionType,
-  T,
-  K,
-  ticker,
+  pageParams,
   method,
   instrument,
 }: {
-  optionType: "european" | "american",
-  T: string,
-  K: string,
-  ticker: string,
+  pageParams: PageParams,
   method: "black-scholes" | "monte-carlo" | "binomial"
   instrument: "call" | "put",
 }): Promise<number> {
   const requestParams = {
-    optionType,
-    T,
-    K,
-    ticker,
+    ...pageParams,
     method,
     instrument
   }
@@ -223,8 +190,8 @@ async function fetchOptionPrice({
         redirect(
           `?${new URLSearchParams({
             ...requestParams,
-            T: new Date().getFullYear() + "-" + (new Date().getMonth() + 2)
-          }).toString()}`
+            T: new Date().getFullYear() + "-" + (new Date().getMonth() + 2).toString().padStart(2, '0') + "-01"
+          })}`
         )
       } else {
         console.log("Error URL:", `${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(requestParams)}`)

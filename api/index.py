@@ -9,6 +9,7 @@ import pandas as pd
 from flask import jsonify, send_file
 import yfinance as yf
 import io
+import json
 # import matplotlib
 # matplotlib.use('Agg')
 # import matplotlib.pyplot as plt
@@ -32,9 +33,14 @@ def hello_world():
 
 
 
-# @app.route("/api/markowitz/main")
-# def markowitz_main():
-#   risk, returns = main(['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'])
+@app.route("/api/markowitz/main")
+def markowitz_main():
+  assets: List[str]=request.args.get('assets').split(',')
+  print(assets)
+  assert isinstance(assets, list), "assets should be a list"
+  risk_free_rate = float(request.args.get('r'))
+  assert isinstance(risk_free_rate, float), "risk_free_rate should be a float"
+  return main(assets,risk_free_rate)
 
 #   # Create a plot
 #   plt.figure()

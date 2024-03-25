@@ -7,18 +7,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/shadcn/Popover"
 import { Button } from "~/shadcn/Button"
 import cn from "~/shadcn/cn"
 import { Calendar } from "~/shadcn/Calendar"
-import { Box, Flex } from "@radix-ui/themes"
+import { Flex } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
 import { formatISO } from 'date-fns'
+import { PageParams } from "../page"
 
 
 
-export default function SelectExpirationDate({ T }: {
-  T: string
-}) {
+export default function SelectExpirationDate({ pageParams }: { pageParams: PageParams }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const date = T ? new Date(T) : new Date()
+  const date = new Date(pageParams.T)
 
   return (
     <Flex direction="column" gap="2">
@@ -29,11 +28,11 @@ export default function SelectExpirationDate({ T }: {
             variant={"outline"}
             className={cn(
               "w-min justify-start text-left font-normal",
-              !T && "text-muted-foreground"
+              !pageParams.T && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {T ? format(T, "PPP") : <span>Pick a date</span>}
+            {format(pageParams.T, "PPP")}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">

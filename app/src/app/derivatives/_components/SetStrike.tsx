@@ -1,43 +1,56 @@
 "use client"
 
+
+import { Spinner } from "@radix-ui/themes";
 import { Box, Flex, Text, TextField } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useTransition } from "react"
+import { useTransition, useState, useEffect } from "react"
+import type { PageParams } from "../page";
+
+const DEBOUNCE_TIME = 250;
 
 export default function SetStrike({
-  optionType,
-  T,
-  K,
+  pageParams,
   currentPrice
 }: {
-  optionType: string,
-  T: string,
-  K: number
+  pageParams: PageParams
   currentPrice: number
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const [inputValue, setInputValue] = useState(pageParams.K);
+  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+
   return (
     <Flex direction="column" gap="2"   >
       <label htmlFor="strike-price">Strike Price</label>
       <Box maxWidth="200px">
         <TextField.Root size="2"
-          defaultValue={K || 0}
+          defaultValue={pageParams.K}
           type="number"
           onChange={
             (e) => {
-              startTransition(() => {
-                router.push(`?${new URLSearchParams({
-                  ...Object.fromEntries(searchParams ?? []),
-                  K: e.target?.value,
-                })}`)
-              })
+              setInputValue(e.target?.value)
+              if (timer) {
+                clearTimeout(timer);
+              }
+
+              setTimer(setTimeout(() => {
+                startTransition(() => {
+                  const params = new URLSearchParams(searchParams);
+                  params.set('K', inputValue.toString());
+                  router.push(`?${params}`);
+                })
+              }, DEBOUNCE_TIME));
             }
           }
         >
           <TextField.Slot>
             $
+          </TextField.Slot>
+          <TextField.Slot>
+            {isPending && <Spinner />}
           </TextField.Slot>
         </TextField.Root>
       </Box>

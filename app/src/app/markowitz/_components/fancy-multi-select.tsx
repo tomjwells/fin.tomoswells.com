@@ -12,36 +12,48 @@ import {
 
 import { Command as CommandPrimitive } from "cmdk";
 import { Badge } from "~/shadcn/Badge";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { PageParams } from "../page";
 
 export type Asset = Record<"value" | "label", string>;
 
 
 
-export function FancyMultiSelect({ assets, selected: selectedAssets }: {
+export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   assets: Asset[]
-  selected: Asset[]
+  pageParams: PageParams
 }) {
+  const selectedAssets = pageParams.assets
+  const router = useRouter()
+  const searchParams = useSearchParams()
   // A nicer UX could be to keep the selected stocks in the state and have a "save" button
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Asset[]>(selectedAssets);
-  // React.useEffect(() => {
-  //   setSelected(selectedAssets)
-  // }, [selectedAssets])
+  const [selected, setSelected] = React.useState<PageParams["assets"]>(selectedAssets);
   const [inputValue, setInputValue] = React.useState("");
-  const router = useRouter();
 
-  React.useEffect(() => {
-    if (!open) router.push("/markowitz?assets=" + JSON.stringify(selected.map(s => s.value)))
-  }, [open])
+
 
   const handleUnselect = (asset: Asset) => {
-    setSelected(prev => prev.filter(s => s.value !== asset.value));
-    // console.log(JSON.stringify(selected.filter(s => s.value !== asset.value).map(s => s.value)))
-    router.push("/markowitz?assets=" + JSON.stringify(selected.filter(s => s.value !== asset.value).map(s => s.value)))
-    // console.log(JSON.stringify(selected.map(s => s.value)))
-    // router.push("/markowitz?assets=" + JSON.stringify(selected.map(s => s.value)))
+    const newSelected = selected.filter(s => s !== asset.value);
+    setSelected(prev => prev.filter(s => s !== asset.value));
+    const params = new URLSearchParams();
+    newSelected.forEach((asset) => {
+      params.append('assets', asset);
+    });
+    params.append('r', pageParams.r.toString());
+    console.log("closing", params.toString())
+    router.push(`?${params.toString()}`);
+  }
+
+  const handleClose = () => {
+    const params = new URLSearchParams();
+    selected.forEach((asset) => {
+      params.append('assets', asset);
+    });
+    params.append('r', pageParams.r.toString());
+    console.log("closing", params.toString())
+    router.push(`?${params.toString()}`);
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -54,7 +66,11 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
             newSelected.pop();
             return newSelected;
           })
-          router.push("/markowitz?assets=" + JSON.stringify(selected.slice(0, -1).map(s => s.value)))
+          const params = new URLSearchParams();
+          selected.forEach((asset) => {
+            params.append('assets', asset);
+          });
+          router.push(`?${params.toString()}`);
         }
       }
       // This is not a default behaviour of the <input /> field
@@ -65,7 +81,6 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
   }
 
   const selectables = assets.filter(asset => !selected
-    .map(s => s.value)
     .includes(asset.value));
 
   return (
@@ -74,7 +89,7 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
         className="group border border-input px-3 py-2 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
       >
         <div className="flex gap-1 flex-wrap">
-          {selected.map((asset) => {
+          {selected.map((s) => ({ value: s, label: s })).map((asset) => {
             return (
               <Badge key={asset.value} variant="secondary">
                 {asset.label}
@@ -96,15 +111,15 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
               </Badge>
             )
           })}
-          {/* Avoid having the "Search" Icon */}
           <CommandPrimitive.Input
             ref={inputRef}
             value={inputValue}
             onValueChange={setInputValue}
-            onBlur={() => setOpen(false)}
+            onBlur={() => { setOpen(false); handleClose() }}
             onFocus={() => setOpen(true)}
             placeholder="Select assets..."
             className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1"
+            style={{ background: "transparent" }}
           />
         </div>
       </div>
@@ -122,8 +137,7 @@ export function FancyMultiSelect({ assets, selected: selectedAssets }: {
                     }}
                     onSelect={(value) => {
                       setInputValue("")
-                      setSelected(prev => [...prev, asset])
-                      // router.push("/markowitz?assets=" + JSON.stringify([...selected, asset].map(s => s.value)))
+                      setSelected(prev => [...prev, asset.value])
                     }}
                     className={"cursor-pointer"}
                   >

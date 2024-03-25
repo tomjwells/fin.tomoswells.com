@@ -5,10 +5,13 @@
 /* Set global background colour to #111113 */
 
 :root {
-  background-color: #111113;
+  /* --background-color: #0B0B0F */
+  --background-color: #0E0E10;
+  /* background-color: #101012; */
+  background-color: var(--background-color)
 }
 .radix-themes {
-  --color-background: #111113;
+  --color-background: var(--background-color);
 }
 
 @layer base {

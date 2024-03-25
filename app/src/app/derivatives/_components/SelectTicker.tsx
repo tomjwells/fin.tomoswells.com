@@ -1,10 +1,11 @@
 "use client"
 import { Flex, Select, TextField } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
-import type { Asset } from "~/app/markowitz/fancy-multi-select";
+import type { Asset } from "~/app/markowitz/_components/fancy-multi-select";
+import type { PageParams } from "../page";
 
-export default function SelectTicker({ ticker, assets }: {
-    ticker: string;
+export default function SelectTicker({ pageParams, assets }: {
+    pageParams: PageParams
     assets: Asset[]
 }) {
     const router = useRouter()
@@ -13,7 +14,7 @@ export default function SelectTicker({ ticker, assets }: {
     return (
         <Flex direction="column" gap="2">
             <label htmlFor="ticker">Ticker</label>
-            <Select.Root defaultValue={ticker}
+            <Select.Root defaultValue={pageParams.ticker}
                 onValueChange={(value) => {
                     console.log(value)
                     router.push(
