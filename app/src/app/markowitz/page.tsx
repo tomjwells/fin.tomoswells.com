@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
-import { Box, Card, Flex, Heading, Text } from "@radix-ui/themes"
+import { Box, Card, Flex, Heading, Text, Link as RadixLink } from "@radix-ui/themes"
 import { FancyMultiSelect } from "./_components/fancy-multi-select"
 import type { Asset } from "./_components/fancy-multi-select"
 import { env } from "~/env"
@@ -10,6 +10,7 @@ import TangencyPortfolioPieChart from "./_components/TangencyPortfolioPieChart"
 import ChartJSChart from "./_components/ChartJSChart"
 import { multiply, inv, ones, subtract, dotMultiply, dotDivide } from 'mathjs'
 import AdvancedControls from "./_components/AdvancedControls"
+import Link from "next/link"
 
 export const runtime = "nodejs"
 
@@ -50,8 +51,8 @@ export default async function MPTPage({
   const pageParams = pageParamsSchema.parse(searchParams)
   const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`, { next: { revalidate: 3600 } }).then(r => r.json()) as Asset[]
   const data = await fetchMPT(pageParams)
-  const tangencyPortfolioWeights = calculateTangencyPortfolio(data.mu, data.Sigma, pageParams.r)
-  const tangencyPortfolio = {
+  const tangencyPortfolioWeights = data ? calculateTangencyPortfolio(data.mu, data.Sigma, pageParams.r) : undefined
+  const tangencyPortfolio = tangencyPortfolioWeights && data ? {
     weights: tangencyPortfolioWeights,
     // TODO
     // return: dotMultiply(tangencyPortfolioWeights, data.asset_datapoints.map(d => d.return)).reduce((a, b) => a + b, 0),
@@ -59,7 +60,7 @@ export default async function MPTPage({
     // risk = float(np.sqrt(tangency_portfolio @ Sigma @ tangency_portfolio))
     // @ts-expect-error mathjs 
     risk: Math.sqrt(multiply(tangencyPortfolioWeights, multiply(data.Sigma, tangencyPortfolioWeights))),
-  }
+  } : undefined
   // console.log({
   //   // tangencyPortfolio, 
   //   tangencyPortfolioWeights
@@ -92,48 +93,50 @@ export default async function MPTPage({
       />
 
       <Heading size="3">Results</Heading>
-      <Box height="700px" width="9" p="4">
-        <Suspense>
-          <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} />
-        </Suspense>
-      </Box>
-      {/* <Box height="500px" width="9" p="4">
-        <Suspense>
-          <PlotlyChart mptData={data} riskFreeRate={pageParams.r} />
-        </Suspense>
-      </Box>
-      <Box height="500px" width="9" p="4">
-        <Suspense>
-          <Chart mptData={data} riskFreeRate={pageParams.r} />
-        </Suspense>
-      </Box> */}
-      <div className="flex flex-col gap-4">
-        <div className="flex gap-4">
-          <div className="w-1/2">
-            <Heading size="4" color="gray">Expected Return</Heading>
-            <Heading size="6">{formatPercent(tangencyPortfolio.return)}</Heading>
-          </div>
-          <div className="w-1/2">
-            <Heading size="4" color="gray">Volatility</Heading>
-            <Heading size="6">{formatPercent(tangencyPortfolio.risk)}</Heading>
-          </div>
-        </div>
-        <div className="flex gap-4">
-          <div className="w-1/2">
-            <Heading size="4" color="gray">Sharpe Ratio</Heading>
-            <Heading size="6">{formatPercent((tangencyPortfolio.return - pageParams.r) / (tangencyPortfolio.risk - 0))}</Heading>
-          </div>
-          <div className="w-1/2">
-            <Heading size="4" color="gray">Sortino Ratio</Heading>
-            <Heading size="6">1.82</Heading>
-          </div>
-        </div>
-      </div>
-      <br />
-      <Heading size="4">The Tangency Portfolio</Heading>
-      <Suspense>
-        <TangencyPortfolioPieChart tangencyPortfolio={tangencyPortfolio} pageParams={pageParams} />
-      </Suspense>
+      {
+        data && tangencyPortfolio && tangencyPortfolioWeights ? (
+          <>
+            <Box height="700px" width="9" p="4">
+              <Suspense>
+                <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} />
+              </Suspense>
+            </Box>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-4">
+                <div className="w-1/2">
+                  <Heading size="4" color="gray">Expected Return</Heading>
+                  <Heading size="6">{formatPercent(tangencyPortfolio.return)}</Heading>
+                </div>
+                <div className="w-1/2">
+                  <Heading size="4" color="gray">Volatility</Heading>
+                  <Heading size="6">{formatPercent(tangencyPortfolio.risk)}</Heading>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="w-1/2">
+                  <Heading size="4" color="gray">Sharpe Ratio</Heading>
+                  <Heading size="6">{formatPercent((tangencyPortfolio.return - pageParams.r) / (tangencyPortfolio.risk - 0))}</Heading>
+                </div>
+                <div className="w-1/2">
+                  <Heading size="4" color="gray">Sortino Ratio</Heading>
+                  <Heading size="6">1.82</Heading>
+                </div>
+              </div>
+            </div>
+            <br />
+            <Heading size="4">The Tangency Portfolio</Heading>
+            <Suspense>
+              <TangencyPortfolioPieChart tangencyPortfolio={tangencyPortfolio} pageParams={pageParams} />
+            </Suspense>
+          </>
+
+        ) : (
+          <Flex justify="center">
+            <Text color="red">Something went wrong on the server. The server can time out if a large number of equities are passed as arguments. Please either <RadixLink asChild><Link href={`?${new URLSearchParams(searchParams as unknown as string)}`}>try again</Link></RadixLink>, or reduce the number of equities.</Text>
+          </Flex>
+        )
+      }
+
 
     </Flex>
   </Card >
@@ -167,21 +170,26 @@ const MPTSchema = z.object({
 })
 export type MPTData = z.infer<typeof MPTSchema>
 async function fetchMPT(pageParams: PageParams) {
-  const queryParams = new URLSearchParams()
-  pageParams.assets.forEach(asset => {
-    queryParams.append('assets', asset)
-  })
-  queryParams.append('startYear', pageParams.startYear.toString())
-  queryParams.append('endYear', pageParams.endYear.toString())
-  console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
-  const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, {
-    cache: env.NODE_ENV === "development" ? 'no-store' : 'force-cache'
-    // cache: 'force-cache'  
-  })
-  const data = await response.json() as string
-  console.log({ data })
-  const parsedData = MPTSchema.parse(data)
-  return parsedData
+  try {
+    const queryParams = new URLSearchParams()
+    pageParams.assets.forEach(asset => {
+      queryParams.append('assets', asset)
+    })
+    queryParams.append('startYear', pageParams.startYear.toString())
+    queryParams.append('endYear', pageParams.endYear.toString())
+    console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
+    const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, {
+      cache: env.NODE_ENV === "development" ? 'no-store' : 'force-cache'
+      // cache: 'force-cache'  
+    })
+    const data = await response.json() as string
+    console.log({ data })
+    const parsedData = MPTSchema.parse(data)
+    return parsedData
+  } catch (e) {
+    console.error(`API Error: ${e}`)
+    return undefined
+  }
 }
 
 
