@@ -4,22 +4,23 @@ import { MPTData, PageParams } from '../page';
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 
-
+type TangencyPortfolio = {
+  weights: number[];
+  return: number;
+  risk: number;
+}
 // Define colors for the Pie chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-export default function TangencyPortfolioPieChart({ mptData, pageParams }: { mptData: MPTData; pageParams: PageParams }) {
+export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParams }: { tangencyPortfolio: TangencyPortfolio; pageParams: PageParams }) {
   // console.log({ MPTData: mptData })
   const tickers = pageParams.assets
-  const data = mptData.data
-  const tangency_portfolio = mptData.tangency_portfolio
-  const slope = (tangency_portfolio.return - pageParams.r) / (tangency_portfolio.risk - 0)
-  console.log({ tangency_portfolio })
+
 
   // Prepare the data for the Pie chart
   const pieData = tickers.map((ticker, index) => ({
     name: ticker,
-    value: tangency_portfolio.weights[index]
+    value: tangencyPortfolio.weights[index]
   }));
 
   return (

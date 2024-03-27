@@ -43,7 +43,8 @@ export default function SelectExpirationDate({ pageParams }: { pageParams: PageP
               `?${new URLSearchParams({
                 ...Object.fromEntries(searchParams),
                 T: formatISO(date, { representation: 'date' }),
-              }).toString()}`
+              })}`,
+              { scroll: false }
             )}
             initialFocus
             disabled={{ from: new Date(1970, 1, 1), to: new Date() }}

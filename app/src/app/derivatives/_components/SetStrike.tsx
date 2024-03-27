@@ -1,13 +1,13 @@
 "use client"
 
 
-import { Spinner } from "@radix-ui/themes";
+import { Spinner } from "@radix-ui/themes"
 import { Box, Flex, Text, TextField } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useTransition, useState, useEffect } from "react"
-import type { PageParams } from "../page";
+import { useTransition, useState } from "react"
+import type { PageParams } from "../page"
 
-const DEBOUNCE_TIME = 250;
+const DEBOUNCE_TIME = 250
 
 export default function SetStrike({
   pageParams,
@@ -19,8 +19,8 @@ export default function SetStrike({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
-  const [inputValue, setInputValue] = useState(pageParams.K);
-  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const [inputValue, setInputValue] = useState(pageParams.K)
+  const [timer, setTimer] = useState<NodeJS.Timeout | null>(null)
 
   return (
     <Flex direction="column" gap="2"   >
@@ -33,16 +33,16 @@ export default function SetStrike({
             (e) => {
               setInputValue(e.target?.value)
               if (timer) {
-                clearTimeout(timer);
+                clearTimeout(timer)
               }
 
               setTimer(setTimeout(() => {
                 startTransition(() => {
-                  const params = new URLSearchParams(searchParams);
-                  params.set('K', inputValue.toString());
-                  router.push(`?${params}`);
+                  const params = new URLSearchParams(searchParams)
+                  params.set('K', inputValue.toString())
+                  router.push(`?${params}`, { scroll: false })
                 })
-              }, DEBOUNCE_TIME));
+              }, DEBOUNCE_TIME))
             }
           }
         >

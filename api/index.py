@@ -35,12 +35,12 @@ def hello_world():
 
 @app.route("/api/markowitz/main")
 def markowitz_main():
-  assets: List[str]=request.args.get('assets').split(',')
+  assets: List[str]=request.args.getlist('assets')
+  startYear: int = int(request.args.get('startYear'))
+  endYear: int = int(request.args.get('endYear'))
   print(assets)
   assert isinstance(assets, list), "assets should be a list"
-  risk_free_rate = float(request.args.get('r'))
-  assert isinstance(risk_free_rate, float), "risk_free_rate should be a float"
-  return main(assets,risk_free_rate)
+  return main(assets, startYear, endYear)
 
 #   # Create a plot
 #   plt.figure()

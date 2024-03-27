@@ -21,7 +21,8 @@ export default function SelectTicker({ pageParams, assets }: {
                         `?${new URLSearchParams({
                             ...Object.fromEntries(searchParams ?? []),
                             ticker: value,
-                        }).toString()}`,
+                        })}`,
+                        { scroll: false }
                     )
                 }}
             >

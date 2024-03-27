@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import * as React from "react";
+import * as React from "react"
 import { Cross2Icon as X } from "@radix-ui/react-icons"
 
 
@@ -8,16 +8,17 @@ import {
   Command,
   CommandGroup,
   CommandItem,
-} from "~/shadcn/Command";
+} from "~/shadcn/Command"
 
-import { Command as CommandPrimitive } from "cmdk";
-import { Badge } from "~/shadcn/Badge";
-import { useRouter, useSearchParams } from "next/navigation";
-import { PageParams } from "../page";
+import { Command as CommandPrimitive } from "cmdk"
+import { Badge } from "~/shadcn/Badge"
+import { useRouter, useSearchParams } from "next/navigation"
+import { PageParams } from "../page"
+import { Spinner } from "@radix-ui/themes"
 
-export type Asset = Record<"value" | "label", string>;
+export type Asset = Record<"value" | "label", string>
 
-
+const DEBOUNCE_TIME = 150
 
 export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   assets: Asset[]
@@ -26,34 +27,37 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const selectedAssets = pageParams.assets
   const router = useRouter()
   const searchParams = useSearchParams()
-  // A nicer UX could be to keep the selected stocks in the state and have a "save" button
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [open, setOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<PageParams["assets"]>(selectedAssets);
-  const [inputValue, setInputValue] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const [open, setOpen] = React.useState(false)
+  const [selected, setSelected] = React.useState<PageParams["assets"]>(selectedAssets)
+  const [inputValue, setInputValue] = React.useState("")
+  const [isPending, startTransition] = React.useTransition()
+  const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
 
+  const update = () => {
+    if (timer) {
+      clearTimeout(timer)
+    }
 
+    setTimer(setTimeout(() => {
+      startTransition(() => {
+        const params = new URLSearchParams(searchParams)
+        params.delete('assets')
+        selected.forEach((asset) => {
+          params.append('assets', asset)
+        })
+        router.push(`?${params.toString()}`, { scroll: false })
+      })
+    }, DEBOUNCE_TIME))
+  }
 
   const handleUnselect = (asset: Asset) => {
-    const newSelected = selected.filter(s => s !== asset.value);
-    setSelected(prev => prev.filter(s => s !== asset.value));
-    const params = new URLSearchParams();
-    newSelected.forEach((asset) => {
-      params.append('assets', asset);
-    });
-    params.append('r', pageParams.r.toString());
-    console.log("closing", params.toString())
-    router.push(`?${params.toString()}`);
+    setSelected(prev => prev.filter(s => s !== asset.value))
+    update()
   }
 
   const handleClose = () => {
-    const params = new URLSearchParams();
-    selected.forEach((asset) => {
-      params.append('assets', asset);
-    });
-    params.append('r', pageParams.r.toString());
-    console.log("closing", params.toString())
-    router.push(`?${params.toString()}`);
+    update()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -62,26 +66,21 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (input.value === "") {
           setSelected(prev => {
-            const newSelected = [...prev];
-            newSelected.pop();
-            return newSelected;
+            const newSelected = [...prev]
+            newSelected.pop()
+            return newSelected
           })
-          const params = new URLSearchParams();
-          selected.forEach((asset) => {
-            params.append('assets', asset);
-          });
-          router.push(`?${params.toString()}`);
+          update()
         }
       }
       // This is not a default behaviour of the <input /> field
       if (e.key === "Escape") {
-        input.blur();
+        input.blur()
       }
     }
   }
 
-  const selectables = assets.filter(asset => !selected
-    .includes(asset.value));
+
 
   return (
     <Command onKeyDown={handleKeyDown} className="overflow-visible bg-transparent">
@@ -97,12 +96,12 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
                   className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleUnselect(asset);
+                      handleUnselect(asset)
                     }
                   }}
                   onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    e.preventDefault()
+                    e.stopPropagation()
                   }}
                   onClick={() => handleUnselect(asset)}
                 >
@@ -114,26 +113,27 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
           <CommandPrimitive.Input
             ref={inputRef}
             value={inputValue}
-            onValueChange={setInputValue}
+            onValueChange={(e) => { setInputValue(e); update() }}
             onBlur={() => { setOpen(false); handleClose() }}
             onFocus={() => setOpen(true)}
             placeholder="Select assets..."
             className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1"
             style={{ background: "transparent" }}
           />
+          {isPending && <Spinner />}
         </div>
       </div>
       <div className="relative mt-2">
-        {open && selectables.length > 0 ?
-          <div className="absolute w-full z-10 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
-            <CommandGroup className="h-full overflow-auto">
-              {selectables.map((asset) => {
+        {open && assets.filter(asset => !selected.includes(asset.value)).length > 0 ?
+          <div className="absolute w-full z-50 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
+            <CommandGroup className="h-full max-h-96 overflow-auto">
+              {assets.filter(asset => !selected.includes(asset.value)).map((asset) => {
                 return (
                   <CommandItem
                     key={asset.value}
                     onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
+                      e.preventDefault()
+                      e.stopPropagation()
                     }}
                     onSelect={(value) => {
                       setInputValue("")
@@ -143,7 +143,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
                   >
                     {asset.label}
                   </CommandItem>
-                );
+                )
               })}
             </CommandGroup>
           </div>

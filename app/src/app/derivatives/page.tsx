@@ -1,21 +1,21 @@
 import { Box, Card, Flex, Grid, Heading, Select, Skeleton, Spinner, Text } from "@radix-ui/themes"
 import { env } from "~/env"
-import { redirect } from "next/navigation";
-import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs";
-import SelectExpirationDate from "./_components/SelectExpirationDate";
-import SetStrike from "./_components/SetStrike";
-import { Asset } from "../markowitz/_components/fancy-multi-select";
-import SelectTicker from "./_components/SelectTicker";
-import { Suspense } from "react";
-import React from "react";
+import { redirect } from "next/navigation"
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs"
+import SelectExpirationDate from "./_components/SelectExpirationDate"
+import SetStrike from "./_components/SetStrike"
+import { Asset } from "../markowitz/_components/fancy-multi-select"
+import SelectTicker from "./_components/SelectTicker"
+import { Suspense } from "react"
+import React from "react"
 import z from "zod"
 
 
 
 type Method = {
-  label: string;
-  value: "black-scholes" | "monte-carlo" | "binomial";
-};
+  label: string
+  value: "black-scholes" | "monte-carlo" | "binomial"
+}
 const METHODS: Method[] = [{
   label: "Black-Scholes",
   value: "black-scholes"
@@ -42,12 +42,12 @@ export default async function MPTPage({
   params,
   searchParams,
 }: {
-  params: { slug: string };
+  params: { slug: string }
   searchParams: Record<string, string | string[] | undefined>
 }) {
   // Validate query params
   if (!pageParamsSchema.safeParse(searchParams).success) redirect(`?${new URLSearchParams({
-    optionType: pageParamsSchema.shape.optionType.safeParse(searchParams.optionType).success ? searchParams?.optionType as PageParams["optionType"] : "american",
+    optionType: pageParamsSchema.shape.optionType.safeParse(searchParams.optionType).success ? searchParams?.optionType as PageParams["optionType"] : "european",
     T: pageParamsSchema.shape.T.safeParse(searchParams.T).success ? searchParams?.T as PageParams["T"] : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
     K: pageParamsSchema.shape.K.safeParse(searchParams.K).success ? searchParams?.K as PageParams["K"] : '100',
     ticker: pageParamsSchema.shape.ticker.safeParse(searchParams.ticker).success ? searchParams?.ticker as PageParams["ticker"] : 'TSLA',
@@ -56,7 +56,7 @@ export default async function MPTPage({
 
   const pageParams = pageParamsSchema.parse(searchParams)
   const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]
-  const methods = pageParams.optionType === "european" ? METHODS : [METHODS[2]] as Method[];
+  const methods = pageParams.optionType === "european" ? METHODS : [METHODS[2]] as Method[]
 
 
 
@@ -72,15 +72,15 @@ export default async function MPTPage({
             <TabsTrigger value={
               `/derivatives?${new URLSearchParams({
                 ...searchParams,
-                optionType: "american"
-              })}`
-            } selected={searchParams?.optionType === "american"}>American Option</TabsTrigger>
-            <TabsTrigger value={
-              `/derivatives?${new URLSearchParams({
-                ...searchParams,
                 optionType: "european"
               })}`
             } selected={pageParams.optionType === "european"}>European Option</TabsTrigger>
+            <TabsTrigger value={
+              `/derivatives?${new URLSearchParams({
+                ...searchParams,
+                optionType: "american"
+              })}`
+            } selected={searchParams?.optionType === "american"}>American Option</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -115,7 +115,7 @@ export default async function MPTPage({
         <div key={label} className="flex flex-col gap-4 my-2">
           <span className="flex flex-col gap-1 w-fit">
             <Heading size="4" weight="bold" className="w-fit">{label}</Heading>
-            {/* <div class="rt-Box" style="height: 1px; background-image: linear-gradient(to right, transparent, var(--gray-a8) 30%, var(--gray-a8) 70%, transparent);"></div> */}
+            {/* <div class="rt-Box" style="height: 1px background-image: linear-gradient(to right, transparent, var(--gray-a8) 30%, var(--gray-a8) 70%, transparent)"></div> */}
             <Box
               style={{
                 // width: "130px",
