@@ -7,7 +7,6 @@ import yfinance as yf
 import numpy.typing as npt
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
-from scipy.optimize import minimize
 
 
 def download_data(ticker: str, start_date: str, end_date: str):
