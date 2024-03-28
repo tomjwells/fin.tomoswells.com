@@ -74,7 +74,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     datasets: [
       {
         label: 'Tangency Portfolio',
-        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return }], // replace with your actual data
+        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return, status: "Tangency Portfolio" }], // replace with your actual data
         type: 'scatter', // set type to scatter
         mode: 'markers',
         borderColor: tangentPortfolioColour,

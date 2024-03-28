@@ -8,11 +8,13 @@ import RiskFreeRateSlider from "./_components/RiskFreeRateSlider"
 import z from "zod"
 import TangencyPortfolioPieChart from "./_components/TangencyPortfolioPieChart"
 import ChartJSChart from "./_components/ChartJSChart"
-import { multiply, inv, ones, subtract, dotMultiply, dotDivide } from 'mathjs'
+// import { multiply, inv, ones, subtract, dotMultiply, dotDivide } from 'mathjs'
 import AdvancedControls from "./_components/AdvancedControls"
 import Link from "next/link"
+import { Vector, Matrix } from 'ts-matrix';
 
-export const runtime = "nodejs"
+
+// export const runtime = "nodejs"
 
 
 // import {
@@ -36,13 +38,11 @@ export default async function MPTPage({
   params: { slug: string }
   searchParams?: Record<string, string | string[] | undefined>
 }) {
-  console.log(!pageParamsSchema.safeParse(searchParams).success)
   if (!pageParamsSchema.safeParse(searchParams).success) {
     const params = new URLSearchParams();
     ["META", "AAPL", "GOOGL", "AMZN", "MSFT", "AMD"].forEach((asset) => {
       params.append('assets', asset)
     })
-    console.log({ r: await getRiskFreeRate() })
     params.append('r', `${await getRiskFreeRate()}`)
     params.append('startYear', `${(new Date()).getFullYear() - 10}`)
     params.append('endYear', `${(new Date()).getFullYear()}`)
@@ -54,17 +54,9 @@ export default async function MPTPage({
   const tangencyPortfolioWeights = data ? calculateTangencyPortfolio(data.mu, data.Sigma, pageParams.r) : undefined
   const tangencyPortfolio = tangencyPortfolioWeights && data ? {
     weights: tangencyPortfolioWeights,
-    // TODO
-    // return: dotMultiply(tangencyPortfolioWeights, data.asset_datapoints.map(d => d.return)).reduce((a, b) => a + b, 0),
-    return: tangencyPortfolioWeights.reduce((a, b, i) => a + b * data.mu[i]!, 0),
-    // risk = float(np.sqrt(tangency_portfolio @ Sigma @ tangency_portfolio))
-    // @ts-expect-error mathjs 
-    risk: Math.sqrt(multiply(tangencyPortfolioWeights, multiply(data.Sigma, tangencyPortfolioWeights))),
+    return: new Vector(data.mu).dot(new Vector(tangencyPortfolioWeights)),
+    risk: calculateRisk(tangencyPortfolioWeights, data.Sigma)
   } : undefined
-  // console.log({
-  //   // tangencyPortfolio, 
-  //   tangencyPortfolioWeights
-  // })
 
   return <Card className="w-full before:![background-color:transparent] p-5"  >
     <Heading size="6">Modern Portfolio Theory</Heading>
@@ -96,7 +88,7 @@ export default async function MPTPage({
       {
         data && tangencyPortfolio && tangencyPortfolioWeights ? (
           <>
-            <Box height="700px" width="9" p="4">
+            <Box height="600px" width="9" p="4">
               <Suspense>
                 <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} />
               </Suspense>
@@ -132,7 +124,7 @@ export default async function MPTPage({
 
         ) : (
           <Flex justify="center">
-            <Text color="red">Something went wrong on the server. The server can time out if a large number of equities are passed as arguments. Please either <RadixLink asChild><Link href={`?${new URLSearchParams(searchParams as unknown as string)}`}>try again</Link></RadixLink>, or reduce the number of equities.</Text>
+            <Text color="red">Something went wrong on the server. The server can time out (after 10s) if a large number of equities are passed as arguments. Please either <RadixLink asChild><Link href={`?${new URLSearchParams(searchParams as unknown as string)}`}>try again</Link></RadixLink>, or reduce the number of equities.</Text>
           </Flex>
         )
       }
@@ -193,14 +185,37 @@ async function fetchMPT(pageParams: PageParams) {
 }
 
 
+// function calculateTangencyPortfolio(mu: number[], Sigma: number[][], riskFreeRate: number): number[] {
+//   console.log("Calculating tangency portfolio")
+//   const invSigma = inv(Sigma)
+//   const onesArray = ones(mu.length)
+//   const numerator = multiply(invSigma, subtract(mu, dotMultiply(riskFreeRate, onesArray)))
+//   const denominator = multiply(multiply(onesArray, invSigma), subtract(mu, dotMultiply(riskFreeRate, onesArray)))
+//   console.log({ denominator })
+//   // @ts-expect-error mathjs
+//   const result = dotDivide(numerator, denominator)
+//   return result.valueOf() as number[]
+// }
+
 function calculateTangencyPortfolio(mu: number[], Sigma: number[][], riskFreeRate: number): number[] {
   console.log("Calculating tangency portfolio")
-  const invSigma = inv(Sigma)
-  const onesArray = ones(mu.length)
-  const numerator = multiply(invSigma, subtract(mu, dotMultiply(riskFreeRate, onesArray)))
-  const denominator = multiply(multiply(onesArray, invSigma), subtract(mu, dotMultiply(riskFreeRate, onesArray)))
-  console.log({ denominator })
-  // @ts-expect-error mathjs
-  const result = dotDivide(numerator, denominator)
-  return result.valueOf() as number[]
+  const invSigma = new Matrix(Sigma.length, Sigma.length, Sigma).inverse();
+  const onesVector = new Matrix(mu.length, 1, mu.map(() => [1]))
+  const subtracted = new Matrix(mu.length, 1, mu.map((v) => [v - riskFreeRate]))
+
+  const numerator = new Vector((invSigma.multiply(subtracted)).transpose().values[0])
+  const denominator = (onesVector.transpose().multiply(invSigma).multiply(subtracted)).values[0]![0]!
+
+  return numerator.scale(1 / denominator).values
+}
+
+function calculateRisk(tangencyPortfolioWeights: number[], Sigma: number[][]) {
+  const tangencyPortfolioWeightsMatrix = new Matrix(tangencyPortfolioWeights.length, 1, tangencyPortfolioWeights.map(v => [v]))
+  const SigmaMatrix = new Matrix(Sigma.length, Sigma.length, Sigma)
+
+  const variance = (tangencyPortfolioWeightsMatrix.transpose().multiply(SigmaMatrix.multiply(tangencyPortfolioWeightsMatrix))).values[0]![0]!
+
+  return Math.sqrt(
+    variance
+  )
 }
