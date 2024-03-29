@@ -16,8 +16,8 @@ from modules.markowitz.main import main
 from modules.derivatives.binomial_model import EUPrice, USPrice
 
 app = Flask(__name__)
-app.config["REDIS_URL"] = os.environ.get("KV_URL").replace("redis://", "rediss://")
-cache = Cache(app, config={'CACHE_TYPE': 'redis'})
+app.config["CACHE_REDIS_URL"] = os.environ.get("KV_URL").replace("redis://", "rediss://")
+cache = Cache(app, config={'CACHE_TYPE': 'RedisCache'})
 timeout = 7*24*60*60
 
 @app.route("/")

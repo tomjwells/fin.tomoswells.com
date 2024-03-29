@@ -24,7 +24,6 @@ def EUPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: floa
   u: float = temp2 + np.sqrt(temp2 * temp2 - 1)
   d: float = 1 / u
   p: float = (np.exp(r * dt) - d) / (u - d)
-  print(f"u: {u}, d: {d}, p: {p}")
   S[0] = S_0
   for n in range(1, NoSteps + 1):
     for j in range(n, 0, -1):
@@ -38,7 +37,6 @@ def EUPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: floa
     V[:n] = (p * V[1:n+1] + (1 - p) * V[:n]) * discount_factor
     # for j in range(n):
     #   V[j] = max((p * V[j + 1] + (1 - p) * V[j]) * discount_factor, payoff(S[j], K))
-  print(f"V: {V[0]}")
   return V[0]
 
 def USPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
