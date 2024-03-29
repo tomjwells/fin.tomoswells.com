@@ -205,7 +205,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
     console.error(JSON.stringify(error))
     return (
       <Flex direction="column" justify="center">
-        <Text color="red">Something went wrong on the server. The server can time out(after 10s) if a large number of equities are passed as arguments. Please either <RadixLink asChild><Link href={`?${new URLSearchParams(searchParams as unknown as string)}`}>try again</Link></RadixLink>, or reduce the number of equities.</Text>
+        <Text color="red">Something went wrong on the server. The server can time out(after 10s) if a large number of equities are passed as arguments. Please either <RadixLink asChild><Link href={`?` + (new URLSearchParams(searchParams as unknown as string)).toString()}>try again</Link></RadixLink>, or reduce the number of equities.</Text>
         {env.NODE_ENV === 'development' && <Text>Error: {JSON.stringify(error)}</Text>}
       </Flex>
     )
