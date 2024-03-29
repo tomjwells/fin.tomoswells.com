@@ -30,7 +30,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const [isPending, startTransition] = React.useTransition()
   const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
 
-  const update = () => {
+  const update = (selectedArg?: string[]) => {
     if (timer) {
       clearTimeout(timer)
     }
@@ -38,8 +38,8 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
     setTimer(setTimeout(() => {
       startTransition(() => {
         const params = new URLSearchParams(searchParams)
-        params.delete('assets')
-        selected.forEach((asset) => {
+        params.delete('assets');
+        (selectedArg ?? selected).forEach((asset) => {
           params.append('assets', asset)
         })
         router.push(`?${params.toString()}`, { scroll: false })
@@ -48,11 +48,11 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   }
 
   const handleUnselect = (asset: Asset) => {
-    setSelected(prev => prev.filter(s => s !== asset.value))
+    const selectedArg = selected.filter(s => s !== asset.value)
+    setSelected(selectedArg)
     if (!open) {
-      update()
+      update(selectedArg)
     }
-    console.log("ran handleUnselect")
   }
 
   const handleClose = () => {
