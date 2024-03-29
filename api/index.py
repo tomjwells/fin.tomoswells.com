@@ -31,8 +31,9 @@ def markowitz_main():
   assets: List[str]=request.args.getlist('assets')
   startYear: int = int(request.args.get('startYear'))
   endYear: int = int(request.args.get('endYear'))
-  print(assets)
   assert isinstance(assets, list), "assets should be a list"
+  assert isinstance(startYear, int), "startYear should be a int"
+  assert isinstance(endYear, int), "endYear should be a int"
   return main(assets, startYear, endYear)
 
 @app.route("/api/markowitz/stocks")
@@ -144,7 +145,7 @@ def get_stock_data(ticker: str) -> tuple[float, float]:
   assert isinstance(stock_data, pd.Series), "stock_data should be a pandas Series"
   returns = stock_data.pct_change()
   meanReturns = returns.mean()
-  sigma = returns.std() # Todo
+  sigma = returns.std()
   return stock_data.iloc[-1], sigma
 
 

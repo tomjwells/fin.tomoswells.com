@@ -50,9 +50,9 @@ def get_returns(ticker: str) -> pd.Series:
         if stock_data is not None:
           break
       except TimeoutError:
-          print("yfinance request timed out. Retrying...")
+        print("yfinance request timed out. Retrying...")
       except Exception as e:
-          print(f"An error occurred: {e}. Retrying...")
+        print(f"An error occurred: {e}. Retrying...")
       time.sleep(1)
   return stock_data
 
@@ -63,7 +63,7 @@ def estimate_ret_and_cov(tickers: List[str], start_date: str, end_date: str) -> 
     Calculates the mean return and covariance of multiple assets
   """
 
-  # Use ThreadPoolExecutor to download data in parallel
+  # Download data in parallel
   with ThreadPoolExecutor() as executor:
     results = executor.map(lambda ticker: get_returns(ticker), tickers)
   results = list(results)
@@ -121,9 +121,7 @@ def main(tickers: List[str], startYear: int, endYear: int):
     "mu": mu.tolist(),
     "Sigma": Sigma.tolist(),
     "Sigma_inverse": np.linalg.inv(Sigma).tolist(),
-    "data": [{"return": R_p_linspace[i], "risk": sigma_p[i], 
-              "weights": weights[i]
-              } for i in range(len(R_p_linspace))],
-      "asset_datapoints": [{"ticker": ticker, "return": mu[i], "risk": np.sqrt(Sigma[i][i])} for i, ticker in enumerate(tickers)],
-      "returns": [ stock_returns[ticker].fillna(0).tolist() for i, ticker in enumerate(tickers)]
-    }
+    "data": [{ "return": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i] } for i in range(len(R_p_linspace))],
+    "asset_datapoints": [{"ticker": ticker, "return": mu[i], "risk": np.sqrt(Sigma[i][i])} for i, ticker in enumerate(tickers)],
+    "returns": [ stock_returns[ticker].fillna(0).tolist() for i, ticker in enumerate(tickers)]
+  }
