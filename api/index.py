@@ -24,7 +24,7 @@ timeout = 7*24*60*60
 
 @app.route("/")
 def hello_main():
-    return "<p>Hello, World!</p>"
+  return "<p>Hello, World!</p>"
 
 ######### Markowitz
 
@@ -40,7 +40,7 @@ def markowitz_main():
   # Compress the response to enable larger payload
   content = gzip.compress(json.dumps(result).encode('utf8'), 5)
   response = make_response(content)
-  response.headers['Content-length'] = len(content)
+  response.headers['Content-length'] = str(len(content))
   response.headers['Content-Encoding'] = 'gzip'
   return response
 
@@ -62,15 +62,15 @@ def get_risk_free():
 
 @app.route("/api/stock/<ticker>")
 def get_stock_price(ticker: str):
-    if not isinstance(ticker, str):
-      return jsonify({'error': 'Invalid ticker'}), 400
-    try:
-      stock = yf.Ticker(ticker)
-      price = stock.info['currentPrice']
-    except Exception as e:
-      return jsonify({'error': str(e)}), 500
+  if not isinstance(ticker, str):
+    return jsonify({'error': 'Invalid ticker'}), 400
+  try:
+    stock = yf.Ticker(ticker)
+    price = stock.info['currentPrice']
+  except Exception as e:
+    return jsonify({'error': str(e)}), 500
 
-    return jsonify({'ticker': ticker, 'price': price})
+  return jsonify({'ticker': ticker, 'price': price})
 
 
 ######### Derivatives
@@ -137,22 +137,21 @@ def get_stock_data(ticker: str) -> tuple[float, float]:
   stock_data: pd.Series | None = None
   for _ in range(10): 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future = executor.submit(download_data, ticker)
-        try:
-            stock_data = future.result(timeout=1)  # Timeout after 1 second
-            if stock_data is not None:
-                break
-        except concurrent.futures.TimeoutError:
-            print("yfinance request timed out. Retrying...")
-        except Exception as e:
-            print(f"An error occurred: {e}. Retrying...")
-        time.sleep(1)
+      future = executor.submit(download_data, ticker)
+      try:
+        stock_data = future.result(timeout=1)  # Timeout after 1 second
+        if stock_data is not None:
+            break
+      except concurrent.futures.TimeoutError:
+        print("yfinance request timed out. Retrying...")
+      except Exception as e:
+        print(f"An error occurred: {e}. Retrying...")
+      time.sleep(1)
 
   if stock_data is None:
     print("Failed to download stock data after 10 attempts.")
   assert isinstance(stock_data, pd.Series), "stock_data should be a pandas Series"
   returns = stock_data.pct_change()
-  meanReturns = returns.mean()
   sigma = returns.std()
   return stock_data.iloc[-1], sigma
 
