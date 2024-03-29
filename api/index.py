@@ -2,13 +2,15 @@
 import os
 import sys
 sys.path.append('..')
+import gzip
+import json
 import time
 from typing import List
 from flask import Flask, request
 from flask_caching import Cache
 
 import pandas as pd
-from flask import jsonify
+from flask import jsonify, make_response
 import yfinance as yf
 
 
@@ -34,7 +36,13 @@ def markowitz_main():
   assert isinstance(assets, list), "assets should be a list"
   assert isinstance(startYear, int), "startYear should be a int"
   assert isinstance(endYear, int), "endYear should be a int"
-  return main(assets, startYear, endYear)
+  result = main(assets, startYear, endYear)
+  # Compress the response to enable larger payload
+  content = gzip.compress(json.dumps(result).encode('utf8'), 5)
+  response = make_response(content)
+  response.headers['Content-length'] = len(content)
+  response.headers['Content-Encoding'] = 'gzip'
+  return response
 
 @app.route("/api/markowitz/stocks")
 @cache.memoize(timeout=timeout)
