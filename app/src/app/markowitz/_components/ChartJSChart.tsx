@@ -74,7 +74,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     datasets: [
       {
         label: 'Tangency Portfolio',
-        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return, status: "Tangency Portfolio" }], // replace with your actual data
+        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return, title: "Tangency Portfolio" }], // replace with your actual data
         type: 'scatter', // set type to scatter
         mode: 'markers',
         borderColor: tangentPortfolioColour,
@@ -93,7 +93,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
       },
       {
         label: 'Capital Allocation Line',
-        data: [{ x: 0, y: riskFreeRate }, {
+        data: [{ x: 0, y: riskFreeRate, title: "Risk-free Rate" }, {
           x: slope * X_MAX + riskFreeRate > Y_MAX ? (Y_MAX - riskFreeRate) / slope : X_MAX,
           y: slope * X_MAX + riskFreeRate > Y_MAX ? Y_MAX : slope * X_MAX + riskFreeRate
         }],
@@ -434,6 +434,9 @@ const externalTooltipHandler = (context) => {
       } else {
         if (tooltip.dataPoints[0]?.raw.status) {
           th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.status))
+        }
+        else if (tooltip.dataPoints[0]?.raw.title) {
+          th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.title))
         } else {
           th.appendChild(document.createTextNode(title))
         }

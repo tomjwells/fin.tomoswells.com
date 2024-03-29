@@ -64,17 +64,18 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]],Sigma: np.ndarray[Any, 
   ones = np.ones(len(mu))
   a = mu.T @ inv_Sigma @ mu
   c = mu.T @ inv_Sigma @ ones
-  f = ones @ inv_Sigma @ ones
-  d = a*f - c*c
+  f = ones.T @ inv_Sigma @ ones
+  print("a:", a, "c:", c, "f:", f)
+  d = a * f - c * c
   # return ((1.0/d) * (f* (R_p_linspace ** 2) - 2*c*R_p_linspace + a)).tolist()
-  var_p = ((1.0/d) * (f* (R_p_linspace ** 2) - 2*c*R_p_linspace + a)).tolist()
+  var_p = ((1.0/d) * (f * (R_p_linspace ** 2) - 2 *  c * R_p_linspace + a)).tolist()
 
   # Also calculate the weights
   weights = []
   for R_p in R_p_linspace:
-    lambda_1 = (1.0/d) * (f - c*R_p)
-    lambda_2 = (1.0/d) * (a - c*R_p)
-    weights.append((0.5 * lambda_1 * inv_Sigma @ mu + 0.5 * lambda_2 * inv_Sigma @ ones).tolist())
+    lambda_1 = (1.0/d) * (f * R_p - c)
+    lambda_2 = (-1.0/d) * (c * R_p - a)
+    weights.append((lambda_1 * inv_Sigma @ mu + lambda_2 * inv_Sigma @ ones).tolist())
 
   return var_p, weights
 
@@ -97,10 +98,8 @@ def main(tickers: List[str], startYear: int, endYear: int):
   assert isinstance(min, float), "min should be a float"
   assert isinstance(max, float), "max should be a float"
   R_p_linspace = np.linspace(min, max, num=1000)
-  print(Sigma)
   var_p, weights = efficient_frontier(mu, Sigma, R_p_linspace)
   sigma_p = np.sqrt(var_p)
-  print(var_p)
   # tangency_portfolio = calculate_tangency_portfolio(mu, Sigma, risk_free_rate)
 
   # Print the results
@@ -126,7 +125,8 @@ def main(tickers: List[str], startYear: int, endYear: int):
     #     "return": float(tangency_portfolio @ mu),
     #     "risk": float(np.sqrt(tangency_portfolio @ Sigma @ tangency_portfolio))
     #   },
-      "asset_datapoints": [{"ticker": ticker, "return": mu[i], "risk": np.sqrt(Sigma[i][i])} for i, ticker in enumerate(tickers)]
+      "asset_datapoints": [{"ticker": ticker, "return": mu[i], "risk": np.sqrt(Sigma[i][i])} for i, ticker in enumerate(tickers)],
+      "returns": [ stock_returns[ticker].tolist() for i, ticker in enumerate(tickers)]
     }
 
 

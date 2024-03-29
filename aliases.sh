@@ -1,18 +1,16 @@
 # Usage: source ./aliases.sh
-HOMEDIR=$(pwd)
+HOMEDIR="$(dirname "$0")"
 
-# install
+#############################################
+# Install Commands
+#############################################
 alias i="cd $HOMEDIR/app && bun install && cd $HOMEDIR || cd $HOMEDIR"
-
-# run
-alias r="cd $HOMEDIR/app && bun run dev && cd $HOMEDIR || cd $HOMEDIR"
-
-
-#############################################
-# Python
-#############################################
 alias pyenv="cd $HOMEDIR python3 -m venv env && source env/bin/activate && pip3 install -r requirements.txt"
-# Run Flask application
+
+#############################################
+# Run Commands
+#############################################
+alias r="cd $HOMEDIR/app && bun run dev && cd $HOMEDIR || cd $HOMEDIR"
 alias runflask="cd $HOMEDIR/api && export FLASK_APP=index.py && export FLASK_ENV=development && flask run -p 8000 || cd $HOMEDIR"
 
 

@@ -27,7 +27,7 @@ export default function RiskFreeRateSlider({ r }: { r: number }) {
       setTimer(setTimeout(() => {
         startTransition(() => {
           const params = new URLSearchParams(searchParams)
-          params.set('r', (value / 100).toString())
+          params.set('r', (value / 100).toFixed(2))
           router.push(`?${params}`, { scroll: false })
         })
       }, DEBOUNCE_TIME))
