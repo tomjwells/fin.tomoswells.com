@@ -1,37 +1,30 @@
 # add the parent directory to the PYTHONPATH programmatically
+import os
 import sys
 sys.path.append('..')
 import time
+from typing import List
 from flask import Flask, request
 from flask_caching import Cache
 
 import pandas as pd
-from flask import jsonify, send_file
+from flask import jsonify
 import yfinance as yf
-import io
-import json
-# import matplotlib
-# matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
-# from matplotlib.ticker import FuncFormatter
 
-from typing import List
 
 from modules.markowitz.main import main
 from modules.derivatives.binomial_model import EUPrice, USPrice
 
 app = Flask(__name__)
-cache = Cache(app, config={'CACHE_TYPE': 'simple'})
-timeout = 600
+app.config["REDIS_URL"] = os.environ.get("KV_URL").replace("redis://", "rediss://")
+cache = Cache(app, config={'CACHE_TYPE': 'redis'})
+timeout = 7*24*60*60
 
 @app.route("/")
 def hello_main():
     return "<p>Hello, World!</p>"
-@app.route("/api/python")
-def hello_world():
-    return "<p>Hello, World!</p>"
 
-
+######### Markowitz
 
 @app.route("/api/markowitz/main")
 def markowitz_main():
@@ -41,34 +34,6 @@ def markowitz_main():
   print(assets)
   assert isinstance(assets, list), "assets should be a list"
   return main(assets, startYear, endYear)
-
-#   # Create a plot
-#   plt.figure()
-#   plt.plot(risk, returns) # Convert returns to percentage
-#   plt.title('Markowitz Portfolio Optimization')
-#   plt.xlabel('Risk')
-#   plt.ylabel('Return (per annum)')
-
-#   # Format y-ticks to be a percentage
-#   formatter = FuncFormatter(lambda y, _: '{:.1%}'.format(y))
-#   plt.gca().yaxis.set_major_formatter(formatter)
-#   plt.gca().xaxis.set_major_formatter(formatter)
-
-#   # Reduce the plot y-axis range
-#   min_risk_index = risk.argmin()
-#   min_risk_return_value = returns[min_risk_index]
-#   EXTEND_Y_RANGE = 0.025
-#   EXTEND_X_RANGE = 0.05
-#   plt.ylim(2*min_risk_return_value-returns.max()-EXTEND_Y_RANGE, returns.max()+EXTEND_Y_RANGE)
-#   plt.xlim(0, risk[-1]+EXTEND_X_RANGE)
-
-#   # Save the plot to a bytes buffer
-#   bytes_image = io.BytesIO()
-#   plt.savefig(bytes_image, format='png')
-#   bytes_image.seek(0)
-
-#   # Return the plot as a PNG image
-#   return send_file(bytes_image, mimetype='image/png')
 
 @app.route("/api/markowitz/stocks")
 @cache.memoize(timeout=timeout)
@@ -89,13 +54,12 @@ def get_risk_free():
 @app.route("/api/stock/<ticker>")
 def get_stock_price(ticker: str):
     if not isinstance(ticker, str):
-        return jsonify({'error': 'Invalid ticker'}), 400
+      return jsonify({'error': 'Invalid ticker'}), 400
     try:
-        stock = yf.Ticker(ticker)
-        # print(stock.info)
-        price = stock.info['currentPrice']
+      stock = yf.Ticker(ticker)
+      price = stock.info['currentPrice']
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+      return jsonify({'error': str(e)}), 500
 
     return jsonify({'ticker': ticker, 'price': price})
 
@@ -126,49 +90,28 @@ def get_option_price():
   assert isinstance(K, (float)), "K should be a float"
   ticker = request.args.get('ticker')
   assert isinstance(ticker, str), "ticker should be a string"
-  # ticker = 'GOOG'
   r: float = get_risk_free_rate()
-  print(f"r: {r}")
   S_0, sigma = get_stock_data(ticker)
 
   # Time until expiration
-  # print(f"t: {t}, T: {T}")
   tau = (T - t).seconds / 31557600
-  # tau = 1
-  print(f"tau: {tau}")
-  print(f"volatility: {sigma}")
 
-  # print(f"option_type: {option_type}, pricing_method: {pricing_method}, t: {t}, T: {T}, K: {K}, ticker: {ticker}, r: {r}, S_0: {S_0}, sigma: {sigma}")
-  print(f"{option_type=}")
   if method == 'binomial':
     if option_type == 'european':
-      call_eu = EUPrice(instrument,S_0, sigma, r, K, tau, int(1e3))
-      return jsonify(call_eu)
+      return jsonify(EUPrice(instrument, S_0, sigma, r, K, tau, int(1e3)))
     elif option_type == 'american':
-      call_us = USPrice(instrument,S_0, sigma, r, K, tau, int(1e3))
-      return jsonify(call_us)
-
+      return jsonify(USPrice(instrument, S_0, sigma, r, K, tau, int(1e3)))
 
   if method == 'black-scholes':
     if option_type == 'european':
-      if instrument == 'call':
-        call_bsm = black_scholes('call', S_0, sigma, K, tau,r)
-        return jsonify(call_bsm)
-      elif instrument == 'put':
-        put_bsm = black_scholes('put', S_0, sigma, K, tau,r)
-        return jsonify(put_bsm)
+      return jsonify(black_scholes(instrument, S_0, sigma, K, tau,r))
     if option_type == 'american':
       return jsonify({"error": "American options are not supported"})
     
   if method == 'monte-carlo':
     num_trials = int(1e3)
     if option_type == 'european':
-      if instrument == 'call':
-        call_mc = monte_carlo('call', S_0, K, tau,r, sigma, num_trials=num_trials)
-        return jsonify(call_mc)
-      elif instrument == 'put':
-        put_mc = monte_carlo('put', S_0, K, tau, r, sigma, num_trials=num_trials)
-        return jsonify(put_mc)
+      return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials))
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported yet"})
 

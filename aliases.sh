@@ -1,11 +1,11 @@
 # Usage: source ./aliases.sh
-HOMEDIR="$(dirname "$0")"
+HOMEDIR="$(cd "$(dirname "$0")"; pwd -P)"
 
 #############################################
 # Install Commands
 #############################################
 alias i="cd $HOMEDIR/app && bun install && cd $HOMEDIR || cd $HOMEDIR"
-alias pyenv="cd $HOMEDIR python3 -m venv env && source env/bin/activate && pip3 install -r requirements.txt"
+alias pyenv="cd $HOMEDIR && python3 -m venv env && source env/bin/activate && pip3 install -r requirements.txt"
 
 #############################################
 # Run Commands
