@@ -342,7 +342,7 @@ function stringToHash(str: string) {
   return hash
 }
 
-function getRandomColor(str: string) {
+export function getRandomColor(str: string) {
   // Convert the string to a hash
   const hash = stringToHash(str)
 

@@ -123,5 +123,5 @@ def main(tickers: List[str], startYear: int, endYear: int):
     "Sigma_inverse": np.around(np.linalg.inv(Sigma),6).tolist(),
     "data": [{ "return": round(R_p_linspace[i],4), "risk": round(sigma_p[i],4), "weights": np.around(weights[i],4).tolist() } for i in range(len(R_p_linspace))],
     "asset_datapoints": [{"ticker": ticker, "return": round(mu[i], 4), "risk":round( np.sqrt(Sigma[i][i]), 4)} for i, ticker in enumerate(tickers)],
-    "returns": [[round(val, 4) for val in stock_returns[ticker].fillna(0).tolist()] for i, ticker in enumerate(tickers)]
+    "returns": [[round(val, 6) for val in stock_returns[ticker].fillna(0).tolist()] for i, ticker in enumerate(tickers)]
   }
