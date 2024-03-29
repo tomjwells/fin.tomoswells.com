@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 import cn from "./cn"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 
 const Tabs = TabsPrimitive.Root
@@ -29,7 +29,6 @@ const TabsTrigger = React.forwardRef<
 >(({ className, selected, ...props }, ref) => {
     const router = useRouter()
     const pathname = usePathname()
-    const searchParams = useSearchParams()
 
     return < TabsPrimitive.Trigger
         data-state={selected || pathname === props.value ? "active" : "inactive"}

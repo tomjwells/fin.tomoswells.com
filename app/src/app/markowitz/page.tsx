@@ -28,7 +28,7 @@ export default async function MPTPage({
   params: { slug: string }
   searchParams?: Record<string, string | string[] | undefined>
 }) {
-  var pageParams
+  let pageParams = {} as PageParams
   try {
     pageParams = pageParamsSchema.parse(searchParams)
   } catch (e) {
@@ -149,8 +149,8 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
     }
 
     // Calculate Sortino Ratio
-    var dailyPortfolioReturns = []
-    for (var i = 0; i < data.returns[0]!.length; i++) {
+    const dailyPortfolioReturns = []
+    for (let i = 0; i < data.returns[0]!.length; i++) {
       dailyPortfolioReturns.push(
         tangencyPortfolioWeights.reduce((acc, weight, j) => acc + weight * data.returns[j]![i]!, 0)
       )

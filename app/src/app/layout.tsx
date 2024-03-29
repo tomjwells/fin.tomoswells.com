@@ -1,29 +1,29 @@
-import "~/styles/globals.css";
+import "~/styles/globals.css"
 import "@radix-ui/themes/styles.css"
 
-import { Inter } from "next/font/google";
+import { Inter } from "next/font/google"
 
 
 import { Container, Flex, Theme, ThemePanel } from "@radix-ui/themes"
-import TabsSelect from "./Nav";
-import { Toaster } from "~/shadcn/Sonner";
+import TabsSelect from "./Nav"
+import { Toaster } from "~/shadcn/Sonner"
 export const runtime = "edge"
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
-});
+})
 
 export const metadata = {
   title: "Financial Tools",
   description: "Created by TJW",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
-};
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
@@ -45,5 +45,5 @@ export default function RootLayout({
         </Theme>
       </body>
     </html>
-  );
+  )
 }

@@ -1,7 +1,7 @@
 
-// import { HomeIcon } from "@radix-ui/react-icons";
-import { Suspense } from "react";
-import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs";
+// import { HomeIcon } from "@radix-ui/react-icons"
+import { Suspense } from "react"
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs"
 
 export default function TabsSelect() {
   return (
