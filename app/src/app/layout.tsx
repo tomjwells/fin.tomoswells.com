@@ -4,9 +4,8 @@ import "@radix-ui/themes/styles.css"
 import { Inter } from "next/font/google"
 
 
-import { Container, Flex, Theme, ThemePanel } from "@radix-ui/themes"
+import { Container, Flex, Theme } from "@radix-ui/themes"
 import TabsSelect from "./Nav"
-import { Toaster } from "~/shadcn/Sonner"
 export const runtime = "edge"
 export const preferredRegion = ['dub1'];
 
@@ -41,8 +40,6 @@ export default function RootLayout({
                 </Flex>
               </Container>
             </main>
-            {/* <Footer /> */}
-            <Toaster />
           </div>
         </Theme>
       </body>

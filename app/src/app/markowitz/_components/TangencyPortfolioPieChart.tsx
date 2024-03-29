@@ -1,8 +1,7 @@
 "use client"
 
 import { Table } from '@radix-ui/themes';
-import { MPTData, PageParams } from '../page';
-import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { PageParams } from '../page';
 import { Bar } from 'react-chartjs-2';
 import { Chart, BarElement, BarController, CategoryScale, LinearScale } from 'chart.js';
 import { getRandomColor } from './ChartJSChart';
@@ -56,7 +55,7 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
       y: {
         ticks: {
           // Include a percent sign in the ticks
-          callback: function (value) {
+          callback: function (value: number) {
             return (100 * value).toFixed(0) + '%';
           }
         }
@@ -85,6 +84,7 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
           }
         </Table.Body>
       </Table.Root>
+      {/* @ts-expect-error chartjs */}
       <Bar data={chartData} options={options} />
     </>
   );
