@@ -107,10 +107,11 @@ async function fetchMPT(pageParams: PageParams) {
   queryParams.append('endYear', pageParams.endYear.toString())
   console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
   const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, {
-    cache: 'force-cache'
+    cache: env.NODE_ENV == 'development' ? "no-cache" : 'force-cache'
+    // cache: 'force-cache'
   })
   const data = await response.json() as string
-  console.log({ data })
+  // console.log({ data })
   const parsedData = MPTSchema.parse(data)
   return parsedData
 }
