@@ -4,11 +4,7 @@ import * as React from "react"
 import { Cross2Icon as X } from "@radix-ui/react-icons"
 
 
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-} from "~/shadcn/Command"
+import { Command, CommandGroup, CommandItem, } from "~/shadcn/Command"
 
 import { Command as CommandPrimitive } from "cmdk"
 import { Badge } from "~/shadcn/Badge"
@@ -54,6 +50,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const handleUnselect = (asset: Asset) => {
     setSelected(prev => prev.filter(s => s !== asset.value))
     update()
+    console.log("ran handleUnselect")
   }
 
   const handleClose = () => {

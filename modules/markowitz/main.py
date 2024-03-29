@@ -126,7 +126,7 @@ def main(tickers: List[str], startYear: int, endYear: int):
     #     "risk": float(np.sqrt(tangency_portfolio @ Sigma @ tangency_portfolio))
     #   },
       "asset_datapoints": [{"ticker": ticker, "return": mu[i], "risk": np.sqrt(Sigma[i][i])} for i, ticker in enumerate(tickers)],
-      "returns": [ stock_returns[ticker].tolist() for i, ticker in enumerate(tickers)]
+      "returns": [ stock_returns[ticker].fillna(0).tolist() for i, ticker in enumerate(tickers)]
     }
 
 
