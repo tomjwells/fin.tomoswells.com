@@ -12,26 +12,16 @@ type TangencyPortfolio = {
   return: number;
   risk: number;
 }
-// Define colors for the Pie chart
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParams }: { tangencyPortfolio: TangencyPortfolio; pageParams: PageParams }) {
-  // console.log({ MPTData: mptData })
   const tickers = pageParams.assets
-
-
-  // Prepare the data for the Pie chart
-  const pieData = tickers.map((ticker, index) => ({
-    name: ticker,
-    value: tangencyPortfolio.weights[index]
-  }));
 
   // Prepare the data for the bar chart
   const chartData = {
     labels: tickers,
     datasets: [
       {
-        label: 'Returns',
+        label: 'Weighting',
         data: tangencyPortfolio.weights,
         borderColor: tickers.map((ticker) => getRandomColor(ticker)),
         backgroundColor: tickers.map((ticker) => getRandomColor(ticker)),
@@ -65,6 +55,8 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
 
   return (
     <>
+      {/* @ts-expect-error chartjs */}
+      <Bar data={chartData} options={options} />
       <Table.Root>
         <Table.Header>
           <Table.Row>
@@ -84,8 +76,6 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
           }
         </Table.Body>
       </Table.Root>
-      {/* @ts-expect-error chartjs */}
-      <Bar data={chartData} options={options} />
     </>
   );
 

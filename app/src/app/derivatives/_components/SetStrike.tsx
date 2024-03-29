@@ -39,7 +39,7 @@ export default function SetStrike({
               setTimer(setTimeout(() => {
                 startTransition(() => {
                   const params = new URLSearchParams(searchParams)
-                  params.set('K', inputValue.toString())
+                  params.set('K', (e.target?.value).toString())
                   router.push(`?${params}`, { scroll: false })
                 })
               }, DEBOUNCE_TIME))
