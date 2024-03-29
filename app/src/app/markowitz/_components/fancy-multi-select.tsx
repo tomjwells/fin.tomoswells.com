@@ -31,7 +31,6 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
 
   const update = () => {
-    if (open) return
     if (timer) {
       clearTimeout(timer)
     }
@@ -50,7 +49,9 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
 
   const handleUnselect = (asset: Asset) => {
     setSelected(prev => prev.filter(s => s !== asset.value))
-    update()
+    if (!open) {
+      update()
+    }
     console.log("ran handleUnselect")
   }
 
@@ -68,7 +69,10 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
             newSelected.pop()
             return newSelected
           })
-          update()
+          if (!open) {
+            update()
+          }
+
         }
       }
       // This is not a default behaviour of the <input /> field
