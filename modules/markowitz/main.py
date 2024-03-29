@@ -20,7 +20,7 @@ def get_returns(ticker: str, start_date: str, end_date: str) -> pd.Series:
   """
   Downloads the adjusted close prices for a given ticker and calculates the daily returns
   """
-  for _ in range(10): 
+  for _ in range(int(1e5)): 
     with ThreadPoolExecutor() as executor:
       future = executor.submit(download_data, ticker, start_date, end_date)
       try:
@@ -117,6 +117,7 @@ def main(tickers: List[str], startYear: int, endYear: int):
     "tickers": tickers,
     "mu": mu.tolist(),
     "Sigma": Sigma.tolist(),
+    "Sigma_inverse": np.linalg.inv(Sigma).tolist(),
     "data": [{"return": R_p_linspace[i], "risk": sigma_p[i], 
               "weights": weights[i]
               } for i in range(len(R_p_linspace))],

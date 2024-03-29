@@ -31,6 +31,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
 
   const update = () => {
+    if (open) return
     if (timer) {
       clearTimeout(timer)
     }

@@ -33,7 +33,7 @@ export default async function MPTPage({
     pageParams = pageParamsSchema.parse(searchParams)
   } catch (e) {
     const params = new URLSearchParams();
-    ["META", "AAPL", "GOOGL", "AMZN", "MSFT", "AMD"].forEach((asset) => {
+    ["META", "AAPL", "GOOGL", "TSLA", "MSFT", "AMD"].forEach((asset) => {
       params.append('assets', asset)
     })
     params.append('r', `${await getRiskFreeRate()}`)
@@ -66,7 +66,7 @@ export default async function MPTPage({
 
 
 
-      <Suspense fallback={<Spinner size="3" />}>
+      <Suspense fallback={<Flex justify="center" align="center" height="400px"><Spinner size="3" /></Flex>}>
         <Heading size="3">Results</Heading>
         <ResultsSection pageParams={pageParams} searchParams={searchParams} />
       </Suspense>
@@ -85,6 +85,7 @@ const MPTSchema = z.object({
   tickers: z.array(z.string()),
   mu: z.array(z.number()),
   Sigma: z.array(z.array(z.number())),
+  Sigma_inverse: z.array(z.array(z.number())),
   data: z.array(z.object({
     weights: z.array(z.number()),
     return: z.number(),
@@ -112,13 +113,15 @@ async function fetchMPT(pageParams: PageParams) {
   })
   const data = await response.json() as string
   // console.log({ data })
+  console.log("fetched")
   const parsedData = MPTSchema.parse(data)
+  console.log("parsed")
   return parsedData
 }
 
 
-function calculateTangencyPortfolio(mu: number[], Sigma: number[][], riskFreeRate: number): number[] {
-  const invSigma = new Matrix(Sigma.length, Sigma.length, Sigma).inverse();
+function calculateTangencyPortfolio(mu: number[], Sigma_inverse: number[][], riskFreeRate: number): number[] {
+  const invSigma = new Matrix(Sigma_inverse.length, Sigma_inverse.length, Sigma_inverse);
   const onesVector = new Matrix(mu.length, 1, mu.map(() => [1]))
   const subtracted = new Matrix(mu.length, 1, mu.map((v) => [v - riskFreeRate]))
 
@@ -142,7 +145,7 @@ function calculateRisk(tangencyPortfolioWeights: number[], Sigma: number[][]) {
 async function ResultsSection({ pageParams, searchParams }: { pageParams: PageParams; searchParams?: Record<string, string | string[] | undefined> }) {
   try {
     const data = await fetchMPT(pageParams)
-    const tangencyPortfolioWeights = calculateTangencyPortfolio(data.mu, data.Sigma, pageParams.r)
+    const tangencyPortfolioWeights = calculateTangencyPortfolio(data.mu, data.Sigma_inverse, pageParams.r)
     const tangencyPortfolio = {
       weights: tangencyPortfolioWeights,
       return: new Vector(data.mu).dot(new Vector(tangencyPortfolioWeights)),
