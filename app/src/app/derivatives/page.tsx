@@ -55,7 +55,7 @@ export default async function MPTPage({
 
 
   const pageParams = pageParamsSchema.parse(searchParams)
-  const assets = await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]
+
   const methods = pageParams.optionType === "european" ? METHODS : [METHODS[2]] as Method[]
 
 
@@ -64,7 +64,6 @@ export default async function MPTPage({
   return <Card className="w-full before:![background-color:transparent] p-6" >
     <Heading size="6">Options Pricing</Heading>
     <Flex direction="column" gap="2" my="4">
-
       <Heading as="h2" size="4">Select an option type.</Heading>
       <div className=" container mx-16 w-full flex  items-center justify-center py-3">
         <Tabs defaultValue="/derivatives?optionType=european" className="w-[400px]">
@@ -86,13 +85,13 @@ export default async function MPTPage({
       </div>
       <Heading size="3" mb="2">Option parameters</Heading>
       <Grid columns={{ initial: "1", sm: "3" }} gap="3" width="auto">
-        <Suspense>
-          <SelectTicker pageParams={pageParams} assets={assets} />
+        <Suspense fallback={<Skeleton>Loading</Skeleton>}>
+          <SelectTicker pageParams={pageParams} assets={await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]} />
         </Suspense>
         <Suspense>
           <SelectExpirationDate pageParams={pageParams} />
         </Suspense>
-        <Suspense>
+        <Suspense fallback={<Skeleton>Loading</Skeleton>}>
           <SetStrike
             pageParams={pageParams}
             currentPrice={(await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price}
@@ -115,10 +114,8 @@ export default async function MPTPage({
         <div key={label} className="flex flex-col gap-4 my-2">
           <span className="flex flex-col gap-1 w-fit">
             <Heading size="4" weight="bold" className="w-fit">{label}</Heading>
-            {/* <div class="rt-Box" style="height: 1px background-image: linear-gradient(to right, transparent, var(--gray-a8) 30%, var(--gray-a8) 70%, transparent)"></div> */}
             <Box
               style={{
-                // width: "130px",
                 height: "1px",
                 backgroundImage: "linear-gradient(to right, transparent, var(--gray-a5) 30%, var(--gray-a5) 70%, transparent)",
               }}

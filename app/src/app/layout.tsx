@@ -3,11 +3,11 @@ import "@radix-ui/themes/styles.css"
 
 import { Inter } from "next/font/google"
 
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import { Container, Flex, Theme } from "@radix-ui/themes"
 import TabsSelect from "./Nav"
 export const runtime = "edge"
-export const preferredRegion = ['dub1'];
 
 
 const inter = Inter({
@@ -28,6 +28,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
+      <SpeedInsights />
       <body className={`font-sans ${inter.variable}`}>
         <Theme appearance="dark">
           <div className="flex min-h-screen flex-col">
