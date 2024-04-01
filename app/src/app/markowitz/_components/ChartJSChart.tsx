@@ -25,13 +25,11 @@ ChartJS.register(
   Legend,
   ScatterController
 )
-// import ChartDataLabels from 'chartjs-plugin-datalabels'
 import {
   blue,
   indigo,
   green,
   amber,
-  crimson,
   cyan, sky,
   iris, grass, teal,
 
@@ -51,10 +49,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
   const slope = (tangencyPortfolio.return - riskFreeRate) / (tangencyPortfolio.risk - 0)
   console.log({ tangency_portfolio: tangencyPortfolio })
 
-  // const Y_MIN = -0.5
-  // const Y_MAX = 1
-  // const X_MIN = 0
-  // const X_MAX = 0.8
   const X_MIN = 0
   const X_MAX = 0.7
   const Y_MIN = Math.min(...data
@@ -140,15 +134,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
 
       },
 
-      // ...mptData.asset_datapoints.map((d, i) => ({
-      //   label: d.ticker,
-      //   data: [{ x: d.risk, y: d.return }], // replace with your actual data
-      //   type: 'scatter', // set type to scatter
-      //   mode: 'markers',
-      //   backgroundColor: 'blue', // customize as needed
-      //   pointRadius: 6,
-      //   fill: false
-      // }))
       ...mptData.asset_datapoints.map((d, i) => {
         const color = getRandomColor(d.ticker) // Generate a random color
 
@@ -167,18 +152,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           pointHoverBackgroundColor: color,
         }
       }),
-      // {
-      //   label: 'Scatter Data',
-      //   //     x: mptData.asset_datapoints.map(d => d.risk),
-      //   // y: mptData.asset_datapoints.map(d => d.return),
-      //   // data: scatterData.x.map((x, i) => ({ x: x, y: scatterData.y[i] })), // transform scatterData into {x, y} format
-      //   data: mptData.asset_datapoints.map(d => ({ x: d.risk, y: d.return, label: d.ticker })),
-      //   type: 'scatter', // set type to scatter
-      //   mode: 'markers',
-      //   backgroundColor: 'blue', // customize as needed
-      //   pointRadius: 6,
-      //   fill: false
-      // },
     ]
   }
 
@@ -197,7 +170,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         for (let i = 0; i < dataset.data.length; i++) {
           if (chart.config.data.datasets[x].data[i].status) {
             const meta = chart.getDatasetMeta(x)
-            // const textwidth = ctx.measureText(chart.config.data.datasets[x].data[i].status).width
 
             // Set the fillStyle to the color of the current datapoint
             ctx.fillStyle = dataset.pointBackgroundColor
@@ -231,7 +203,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           tickBorderDash: [4, 4], // also for the tick, if long enough
           tickLength: 0, // just to see the dotted line
           tickWidth: 1,
-          // offset: true,
           drawTicks: true, // true is default 
           drawOnChartArea: true // true is default 
         },
@@ -269,7 +240,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           callback: function (value: number, index: number, values: number[]) {
             // Don't display the label for Y_MIN and Y_MAX
             if (value === Y_MIN || value === Y_MAX) {
-              // return Math.round(value * 10) * 10 + '%'
               return ''
             }
             return Math.round(value * 10) * 10 + '%' // convert to percentage
@@ -284,12 +254,9 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           color: function (context: { tick: { value: number } }) {
             return context.tick.value === Y_MIN || context.tick.value === Y_MAX ? 'transparent' : 'rgba(128, 128, 128, 0.5)'
           },
-          // color: 'rgba(256, 256, 256, 0.3)', // for the grid lines
-          // tickColor: 'rgba(256, 256, 256, 0.3)', // for the tick mark
           tickBorderDash: [4, 4], // also for the tick, if long enough
           tickLength: 10, // just to see the dotted line
           tickWidth: 1,
-          // offset: true,
           drawTicks: true, // true is default 
           drawOnChartArea: true // true is default 
         },
@@ -325,7 +292,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     // @ts-expect-error ChartJS
     <Line data={chartData} options={options}
       plugins={[
-        // ChartDataLabels
         scatterDataLabelsPlugin
       ]} />
   )
@@ -412,7 +378,6 @@ const externalTooltipHandler = (context) => {
     tooltipEl.style.opacity = 0
     return
   }
-  // console.log({ tooltipItems: tooltip.$context.dataPoints[0]?.raw.weights })
 
   // Set Text
   if (tooltip.body) {

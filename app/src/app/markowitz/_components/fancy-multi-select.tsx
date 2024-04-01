@@ -2,15 +2,13 @@
 
 import * as React from "react"
 import { Cross2Icon as X } from "@radix-ui/react-icons"
-
-
 import { Command, CommandGroup, CommandItem, } from "~/shadcn/Command"
-
 import { Command as CommandPrimitive } from "cmdk"
 import { Badge } from "~/shadcn/Badge"
 import { useRouter, useSearchParams } from "next/navigation"
 import { PageParams } from "../page"
 import { Spinner } from "@radix-ui/themes"
+import { flushSync } from "react-dom"
 
 export type Asset = Record<"value" | "label", string>
 
@@ -30,7 +28,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const [isPending, startTransition] = React.useTransition()
   const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
 
-  const update = (selectedArg?: string[]) => {
+  const update = () => {
     if (timer) {
       clearTimeout(timer)
     }
@@ -39,25 +37,22 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
       startTransition(() => {
         const params = new URLSearchParams(searchParams)
         params.delete('assets');
-        (selectedArg ?? selected).forEach((asset) => {
+        selected.forEach((asset) => {
           params.append('assets', asset)
         })
-        router.push(`?${params.toString()}`, { scroll: false })
+        router.push(`?${params}`, { scroll: false })
       })
     }, DEBOUNCE_TIME))
   }
 
   const handleUnselect = (asset: Asset) => {
-    const selectedArg = selected.filter(s => s !== asset.value)
-    setSelected(selectedArg)
-    if (!open) {
-      update(selectedArg)
-    }
+    flushSync(() =>
+      setSelected((prev) => prev.filter(s => s !== asset.value))
+    )
+    if (!open) update()
   }
 
-  const handleClose = () => {
-    update()
-  }
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const input = inputRef.current
@@ -116,7 +111,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
             ref={inputRef}
             value={inputValue}
             onValueChange={(e) => { setInputValue(e); update() }}
-            onBlur={() => { setOpen(false); handleClose() }}
+            onBlur={() => { setOpen(false); update() }}
             onFocus={() => setOpen(true)}
             placeholder="Select assets..."
             className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1"

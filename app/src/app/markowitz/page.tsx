@@ -14,7 +14,7 @@ import { Vector, Matrix } from 'ts-matrix';
 
 
 const pageParamsSchema = z.object({
-  assets: z.array(z.string()), // TODO: Handle case of single asset (.or(z.string().transform(v => [v])))
+  assets: z.array(z.string()),
   r: z.coerce.number().min(0).transform(v => v < 0 ? 0 : v),
   startYear: z.coerce.number().min(2000).max((new Date()).getFullYear()),
   endYear: z.coerce.number().min(2000).max((new Date()).getFullYear()),
@@ -33,9 +33,8 @@ export default async function MPTPage({
     pageParams = pageParamsSchema.parse(searchParams)
   } catch (e) {
     const params = new URLSearchParams();
-    ["META", "AAPL", "GOOGL", "TSLA", "MSFT", "AMD"].forEach((asset) => {
-      params.append('assets', asset)
-    })
+    const defaultAssets = ["META", "AAPL", "GOOGL", "TSLA", "MSFT", "AMD"]
+    defaultAssets.forEach((asset) => params.append('assets', asset))
     params.append('r', `${await getRiskFreeRate()}`)
     params.append('startYear', `${(new Date()).getFullYear() - 10}`)
     params.append('endYear', `${(new Date()).getFullYear()}`)
@@ -77,7 +76,6 @@ export default async function MPTPage({
 }
 
 const formatPercent = (num: number) => `${(100 * num).toFixed(1)}%`
-
 const getRiskFreeRate = async () => parseFloat(((await fetch(`${env.APP_URL}/api/utils/risk-free-rate`).then(r => r.json())) as number).toFixed(6))
 const fetchAssets = async () => await fetch(`${env.APP_URL}/api/markowitz/stocks`).then(r => r.json()) as Asset[]
 
@@ -113,9 +111,7 @@ async function fetchMPT(pageParams: PageParams) {
   })
   const data = await response.json() as string
   // console.log({ data })
-  console.log("fetched")
   const parsedData = MPTSchema.parse(data)
-  console.log("parsed")
   return parsedData
 }
 
@@ -159,8 +155,6 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
         tangencyPortfolioWeights.reduce((acc, weight, j) => acc + weight * data.returns[j]![i]!, 0)
       )
     }
-    // const negativeReturns = dailyPortfolioReturns.filter(val => val < 0)
-    // const sortinoVariance = (252 / (negativeReturns.length)) * negativeReturns.reduce((acc, returnVal) => acc + returnVal ** 2, 0)
     const sortinoVariance = (252 / data.returns[0]!.length) * dailyPortfolioReturns.reduce((acc, returnVal) => acc + Math.min(0, returnVal) ** 2, 0)
 
 
@@ -201,7 +195,6 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
       </>
     )
   } catch (error) {
-    console.error(error)
     console.error(JSON.stringify(error))
     return (
       <Flex direction="column" justify="center">

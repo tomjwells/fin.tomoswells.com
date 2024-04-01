@@ -14,6 +14,7 @@ const config = {
     {
       files: ["src/app/markowitz/_components/ChartJSChart.tsx"],
       rules: {
+        '@typescript-eslint/no-implicit-any': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/no-unsafe-member-access': 'off',
         '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -32,7 +33,6 @@ const config = {
     "@typescript-eslint/prefer-nullish-coalescing": "off",
 
     // These opinionated rules are enabled in stylistic-type-checked above.
-    // Feel free to reconfigure them to your own preference.
     "@typescript-eslint/array-type": "off",
     "@typescript-eslint/consistent-type-definitions": "off",
 

@@ -1,5 +1,5 @@
 "use client"
-import * as React from "react"
+import React from "react"
 import { Flex, IconButton, Slider, Spinner, TextField } from "@radix-ui/themes"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useTransition, useState, useEffect } from "react"
@@ -39,7 +39,6 @@ export default function RiskFreeRateSlider({ r }: { r: number }) {
     <Flex direction="row" align="center" gap="4" my="4">
       <TextField.Root size="2" value={value.toFixed(2)} className="w-32" onChange={(e) => handleInputChange(parseFloat(e.target.value))} type="number">
         <TextField.Slot>r</TextField.Slot>
-        {/* <TextField.Slot></TextField.Slot> */}
         <TextField.Slot>{isPending ? <Spinner /> : (`%`)}</TextField.Slot>
       </TextField.Root>
       <Slider
@@ -52,7 +51,6 @@ export default function RiskFreeRateSlider({ r }: { r: number }) {
           setValue(value[0]! / (SLIDER_MAX - SLIDER_MIN))
           handleInputChange(value[0]! / (SLIDER_MAX - SLIDER_MIN))
         }}
-
       />
     </Flex>
   )
