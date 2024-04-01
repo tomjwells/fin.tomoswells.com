@@ -20,8 +20,8 @@ const inter = Inter({
 })
 
 export const metadata = {
-  title: "Financial Tools",
-  description: "Created by TJW",
+  title: "Financial Mathematics Tools",
+  description: "Quantitative Finance Tools - created by TJW",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 }
 

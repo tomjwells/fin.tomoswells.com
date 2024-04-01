@@ -29,9 +29,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
 
   const update = () => {
-    if (timer) {
-      clearTimeout(timer)
-    }
+    if (timer) clearTimeout(timer)
 
     setTimer(setTimeout(() => {
       startTransition(() => {
@@ -46,11 +44,9 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
   }
 
   const handleUnselect = (asset: Asset) => {
-    flushSync(() =>
-      setSelected((prev) => prev.filter(s => s !== asset.value))
-    )
-    if (!open) update()
+    setSelected((prev) => prev.filter(s => s !== asset.value))
   }
+  React.useEffect(() => { if (!open) update() }, [open, selected])
 
 
 
@@ -114,7 +110,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: {
             onBlur={() => { setOpen(false); update() }}
             onFocus={() => setOpen(true)}
             placeholder="Select assets..."
-            className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1"
+            className="ml-2 bg-transparent border-none outline-none placeholder:text-muted-foreground flex-1"
             style={{ background: "transparent" }}
           />
           {isPending && <Spinner />}
