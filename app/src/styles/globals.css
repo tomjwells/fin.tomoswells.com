@@ -49,3 +49,7 @@
 * {
   border-color: hsl(240 3.7% 15.9%);
 }
+
+button {
+  cursor: pointer;
+}
