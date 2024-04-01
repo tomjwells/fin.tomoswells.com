@@ -29,7 +29,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
-      <body className={`font-sans ${inter.variable}`}>
+      {/* <body className={`font-sans ${inter.variable}`}> */}
+      <body className={`font-sans`}>
         <Theme appearance="dark">
           <div className="flex min-h-screen flex-col">
             <span className="py-4 sm:py-8" />

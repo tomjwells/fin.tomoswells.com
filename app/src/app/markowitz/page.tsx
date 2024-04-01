@@ -41,7 +41,7 @@ export default async function MPTPage({
     redirect(`?${params.toString()}`)
   }
 
-  return <Card className="w-full before:![background-color:transparent] p-5"  >
+  return <Card className="w-full before:![background-color:transparent] !p-5"  >
     <Heading size="6">Modern Portfolio Theory</Heading>
     <Flex direction="column" gap="2" my="4">
 

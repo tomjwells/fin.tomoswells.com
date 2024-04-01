@@ -61,7 +61,7 @@ export default async function MPTPage({
 
 
 
-  return <Card className="w-full before:![background-color:transparent] p-6" >
+  return <Card className="w-full before:![background-color:transparent] !p-6" >
     <Heading size="6">Options Pricing</Heading>
     <Flex direction="column" gap="2" my="4">
       <Heading as="h2" size="4">Select an option type.</Heading>
