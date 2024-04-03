@@ -94,7 +94,7 @@ export default async function MPTPage({
         <Suspense fallback={<Skeleton>Loading</Skeleton>}>
           <SetStrike
             pageParams={pageParams}
-            currentPrice={(await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 7 * 24 * 60 * 60 } }).then(r => r.json()) as { price: number }).price}
+            currentPrice={(await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price}
           />
         </Suspense>
       </Grid>
@@ -104,7 +104,7 @@ export default async function MPTPage({
           The list of selectable companies is based on the S&P 500 index.
         </li>
         <li >
-          <Text>The risk free rate used for the calculation is that of the three-month U.S. Treasury bill (currently: r={(100 * (await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 1 * 24 * 60 * 60 } }).then(r => r.json()))).toFixed(2)}%).</Text>
+          <Text>The risk free rate used for the calculation is that of the three-month U.S. Treasury bill (currently: r = {(100 * (await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, { next: { revalidate: 1 * 24 * 60 * 60 } }).then(r => r.json()))).toFixed(2)}%).</Text>
         </li>
       </ul>
 

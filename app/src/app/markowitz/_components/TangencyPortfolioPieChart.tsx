@@ -38,7 +38,7 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
       },
       title: {
         display: true,
-        text: 'Portfolio Weights by Ticker',
+        text: 'Weighting of each asset in the tangency portfolio',
       },
     },
     scales: {

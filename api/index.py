@@ -10,6 +10,7 @@ from flask import Flask, request
 from flask_caching import Cache
 
 import pandas as pd
+import numpy as np  
 from flask import jsonify, make_response
 import yfinance as yf
 
@@ -95,6 +96,7 @@ def get_option_price():
   T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')
   if t > T:
     return jsonify({"error": f"t: {t} should be less than T: {T}"}), 400
+  tau = (T - t).total_seconds() / 31557600
   K: float = float(request.args.get('K'))
   assert isinstance(K, (float)), "K should be a float"
   ticker = request.args.get('ticker')
@@ -102,8 +104,7 @@ def get_option_price():
   r: float = get_risk_free_rate()
   S_0, sigma = get_stock_data(ticker)
 
-  # Time until expiration
-  tau = (T - t).seconds / 31557600
+  print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
 
   if method == 'binomial':
     if option_type == 'european':
@@ -130,7 +131,7 @@ import concurrent.futures
 def download_data(ticker: str):
     return yf.download(ticker, progress=False)['Adj Close']
 
-@cache.memoize(timeout=timeout)
+# @cache.memoize(timeout=timeout)
 def get_stock_data(ticker: str) -> tuple[float, float]:
   # Get the stock data
   print("ticker: ",ticker)
@@ -153,7 +154,7 @@ def get_stock_data(ticker: str) -> tuple[float, float]:
   assert isinstance(stock_data, pd.Series), "stock_data should be a pandas Series"
   returns = stock_data.pct_change()
   sigma = returns.std()
-  return stock_data.iloc[-1], sigma
+  return stock_data.iloc[-1], np.sqrt(365) * sigma
 
 
 @cache.memoize(timeout=timeout)

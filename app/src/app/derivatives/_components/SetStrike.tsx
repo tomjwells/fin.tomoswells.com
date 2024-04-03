@@ -36,7 +36,7 @@ export default function SetStrike({
                 clearTimeout(timer)
               }
 
-              setTimer(setTimeout(() => {
+              if (e.target?.value) setTimer(setTimeout(() => {
                 startTransition(() => {
                   const params = new URLSearchParams(searchParams)
                   params.set('K', (e.target?.value).toString())
