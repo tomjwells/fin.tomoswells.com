@@ -108,10 +108,11 @@ def get_option_price():
   # print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
 
   if method == 'binomial':
+    num_steps = int(1e3)
     if option_type == 'european':
-      return jsonify(EUPrice(instrument, S_0, sigma, r, K, tau, int(1e3)))
+      return jsonify(EUPrice(instrument, S_0, sigma, r, K, tau, num_steps))
     elif option_type == 'american':
-      return jsonify(USPrice(instrument, S_0, sigma, r, K, tau, int(1e3)))
+      return jsonify(USPrice(instrument, S_0, sigma, r, K, tau, num_steps))
 
   if method == 'black-scholes':
     if option_type == 'european':

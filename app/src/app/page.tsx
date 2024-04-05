@@ -1,5 +1,5 @@
 import { InfoCircledIcon } from "@radix-ui/react-icons"
-import { Container, Flex, Heading, Text, Card, Link, Callout } from "@radix-ui/themes"
+import { Flex, Heading, Text, Card, Link, Callout } from "@radix-ui/themes"
 import NextLink from "next/link"
 
 

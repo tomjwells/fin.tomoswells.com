@@ -1,7 +1,7 @@
-import { Box, Card, Flex, Grid, Heading, IconButton, Popover, Skeleton, Spinner, Text, Tooltip } from "@radix-ui/themes"
+import { Box, Card, Flex, Grid, Heading, IconButton, Popover, Skeleton, Text } from "@radix-ui/themes"
 import { env } from "~/env"
 import { redirect } from "next/navigation"
-import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs"
+import { Tabs, TabsList, TabsTrigger } from "~/shadcn/Tabs"
 import SelectExpirationDate from "./_components/SelectExpirationDate"
 import SetStrike from "./_components/SetStrike"
 import { Asset } from "../markowitz/_components/fancy-multi-select"
@@ -9,7 +9,7 @@ import SelectTicker from "./_components/SelectTicker"
 import { Suspense } from "react"
 import React from "react"
 import z from "zod"
-import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons"
+import { InfoCircledIcon } from "@radix-ui/react-icons"
 
 
 
@@ -24,7 +24,7 @@ const METHODS: Method[] = [{
 }, {
   label: "Monte Carlo",
   value: "monte-carlo",
-  tooltip: "Monte Carlo is a statistical method that relies on a large number of random trials. This randomness can be seen by refreshing the page, which will show the number jump around with a mean of the correct value. The method can be made arbitrarily accurate by increasing the number of trials (although the computation will take longer)."
+  tooltip: "Monte Carlo is a statistical method that relies on a large number of random trials. This randomness can be seen by refreshing the page multiple times, which shows the Monte Carlo result jump around with a mean of the correct value. The method can be made arbitrarily accurate by increasing the number of trials (although the computation will take longer)."
 }, {
   label: "Binomial",
   value: "binomial"

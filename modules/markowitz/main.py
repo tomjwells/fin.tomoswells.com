@@ -32,13 +32,7 @@ def cache(func):
       return val
   return wrapper
 
-def download_data(ticker: str):
-  """
-    Downloads the adjusted close prices for a given ticker and calculates the daily returns
-  """
-  stock_data = yf.download(ticker.replace('.','-'), progress=False)['Adj Close']
-  daily_returns = stock_data.pct_change().dropna()
-  return daily_returns
+
 
 @cache
 def get_returns(ticker: str) -> pd.Series:
@@ -57,6 +51,13 @@ def get_returns(ticker: str) -> pd.Series:
   return stock_data
 
 
+def download_data(ticker: str):
+  """
+    Downloads the adjusted close prices for a given ticker and calculates the daily returns
+  """
+  stock_data = yf.download(ticker.replace('.','-'), progress=False)['Adj Close']
+  daily_returns = stock_data.pct_change().dropna()
+  return daily_returns
 
 def estimate_ret_and_cov(tickers: List[str], start_date: str, end_date: str) -> tuple[pd.DataFrame, pd.DataFrame]:
   """
@@ -101,6 +102,8 @@ def main(tickers: List[str], startYear: int, endYear: int):
   stock_returns, cov_matrix = estimate_ret_and_cov(tickers, start_date, end_date)
 
   # Estimate the expected returns
+  print(stock_returns.head())
+  print(252 * stock_returns.mean().values)
   mu: npt.NDArray[np.floating[Any]] = 252 * stock_returns.mean().values
   Sigma = 252 * cov_matrix.values
 
@@ -113,8 +116,7 @@ def main(tickers: List[str], startYear: int, endYear: int):
 
   # Check risk is a float
   for i in range(len(tickers)): 
-    risk = np.sqrt(Sigma[i][i])
-    assert isinstance(risk, float), "Risk should be a float"
+    assert isinstance(np.sqrt(Sigma[i][i]), float), "Risk should be a float"
 
   return {
     "tickers": tickers,

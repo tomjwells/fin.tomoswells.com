@@ -61,6 +61,181 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
       (Y_MAX - riskFreeRate) / slope : X_MAX, y: slope * X_MAX + riskFreeRate > Y_MAX ? Y_MAX : slope * X_MAX + riskFreeRate
   }]
 
+  const externalTooltipHandler = (context) => {
+    // Tooltip Element
+    const { chart, tooltip } = context
+    const tooltipEl = getOrCreateTooltip(chart)
+
+    // Hide if no tooltip
+    if (tooltip.opacity === 0) {
+      tooltipEl.style.opacity = 0
+      return
+    }
+
+    // Set Text
+    if (tooltip.body) {
+      const titleLines = tooltip.title || []
+      const bodyLines = tooltip.body.map(b => b.lines)
+
+      const tableHead = document.createElement('thead')
+
+      // @ts-expect-error any
+      titleLines.forEach(title => {
+        const tr = document.createElement('tr')
+        tr.style.borderWidth = "0"
+
+        const th = document.createElement('th')
+        th.style.borderWidth = "0"
+
+        // Square
+        const span = document.createElement('span')
+        const colors = tooltip.labelColors[0]
+        span.style.background = colors.backgroundColor
+        span.style.borderColor = colors.borderColor
+        span.style.borderWidth = '2px'
+        span.style.marginRight = '10px'
+        span.style.height = '10px'
+        span.style.width = '10px'
+        span.style.display = 'inline-block'
+        th.appendChild(span)
+
+
+        if (tooltip.dataPoints[0]?.raw.weights) {
+          th.appendChild(document.createTextNode("Efficient Frontier"))
+        } else {
+          if (tooltip.dataPoints[0]?.raw.status) {
+            th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.status))
+          }
+          else if (tooltip.dataPoints[0]?.raw.title) {
+            th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.title))
+          } else {
+            th.appendChild(document.createTextNode(title))
+          }
+        }
+
+        tr.appendChild(th)
+        tableHead.appendChild(tr)
+      })
+
+      const tableBody = document.createElement('tbody')
+      // @ts-expect-error any
+      bodyLines.forEach((body, i) => {
+        const tr2 = document.createElement('tr')
+        const td2 = document.createElement('td')
+        const text2 = document.createTextNode(`Expected Return: ${(tooltip.dataPoints[0]?.raw.y * 100).toFixed(2)}%`)
+        td2.appendChild(text2)
+        tr2.appendChild(td2)
+
+        const tr = document.createElement('tr')
+        tr.style.backgroundColor = 'inherit'
+        tr.style.borderWidth = "0"
+        const td = document.createElement('td')
+        td.style.borderWidth = "0"
+        const text1 = document.createTextNode(`Volatility: ${(tooltip.dataPoints[0]?.raw.x * 100).toFixed(2)}%`)
+        td.appendChild(text1)
+        tr.appendChild(td)
+
+        const tr3 = document.createElement('tr')
+        const td3 = document.createElement('td')
+        const text3 = document.createTextNode(`Sharpe Ratio: ${((tooltip.dataPoints[0]?.raw.y - riskFreeRate) / tooltip.dataPoints[0]?.raw.x).toFixed(2)}`)
+        td3.appendChild(text3)
+        tr3.appendChild(td3)
+
+
+        tableBody.appendChild(tr2)
+        tableBody.appendChild(tr)
+        tableBody.appendChild(tr3)
+
+
+      })
+
+
+      // Remove old children
+      const tableRoot = tooltipEl.querySelector('table')
+      while (tableRoot.firstChild) {
+        tableRoot.firstChild.remove()
+      }
+
+      // Add new children
+      tableRoot.appendChild(tableHead)
+      tableRoot.appendChild(tableBody)
+    }
+
+    // Remove old children
+    const tableRoot = tooltipEl.querySelector('#tooltip-table')
+    while (tableRoot.firstChild) {
+      tableRoot.firstChild.remove()
+    }
+    // Add weights
+    if (tooltip.dataPoints[0]?.raw.weights) {
+      console.log({ tooltipItems: tooltip.dataPoints[0]?.raw.weights })
+      const weights = tooltip.dataPoints[0]?.raw.weights
+
+      if (weights) {
+
+        // Create the table head
+        const thead = document.createElement('thead')
+        thead.style.width = '400px'
+        const headerRow = document.createElement('tr')
+        const tickerHeader = document.createElement('th')
+        tickerHeader.textContent = 'Ticker'
+        const weightHeader = document.createElement('th')
+        weightHeader.textContent = 'Weight'
+        headerRow.appendChild(tickerHeader)
+        headerRow.appendChild(weightHeader)
+        thead.appendChild(headerRow)
+        const table = document.createElement('table')
+        table.appendChild(thead)
+
+        // Create the table body
+        const tbody = document.createElement('tbody')
+        for (const [k, v] of Object.entries(weights)) {
+          const row = document.createElement('tr')
+          // Create a colored square
+          const colorSquare = document.createElement('span')
+          const color = getRandomColor(k)
+          colorSquare.style.background = color
+          colorSquare.style.borderColor = color
+          colorSquare.style.borderWidth = '2px'
+          colorSquare.style.marginRight = '10px'
+          colorSquare.style.height = '10px'
+          colorSquare.style.width = '10px'
+          colorSquare.style.display = 'inline-block'
+
+          const tickerDiv = document.createElement('div')
+          tickerDiv.style.width = '100px'
+          tickerDiv.style.whiteSpace = 'nowrap'
+
+          // Add the color square and the text to the div
+          tickerDiv.appendChild(colorSquare)
+          tickerDiv.appendChild(document.createTextNode(k))
+
+          // Add the div to the ticker cell
+          const tickerCell = document.createElement('td')
+          tickerCell.appendChild(tickerDiv)
+          const weightCell = document.createElement('td')
+          weightCell.textContent = `${(100 * parseFloat(v as string)).toFixed(2)}%`
+          row.appendChild(tickerCell)
+          row.appendChild(weightCell)
+          tbody.appendChild(row)
+        }
+        table.appendChild(tbody)
+
+        // Append
+        const tooltipBody = tooltipEl.querySelector('#tooltip-table')
+        tooltipBody.appendChild(table)
+      }
+    }
+
+    const { offsetLeft: positionX, offsetTop: positionY } = chart.canvas
+
+    // Display, position, and set styles for font
+    tooltipEl.style.opacity = 1
+    tooltipEl.style.left = positionX + tooltip.caretX + 'px'
+    tooltipEl.style.top = positionY + tooltip.caretY + 'px'
+    tooltipEl.style.font = tooltip.options.bodyFont.string
+    tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px'
+  }
 
   const minRiskDataPoint = data.reduce((min, current) => current.risk < min.risk ? current : min, data[0]!)
   const chartData = {
@@ -288,6 +463,8 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     maintainAspectRatio: false
   }
 
+
+
   return (
     // @ts-expect-error ChartJS
     <Line data={chartData} options={options}
@@ -295,6 +472,8 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         scatterDataLabelsPlugin
       ]} />
   )
+
+
 }
 
 
@@ -366,178 +545,3 @@ const getOrCreateTooltip = (chart) => {
   return tooltipEl
 }
 
-const externalTooltipHandler = (context) => {
-  // Tooltip Element
-  const { chart, tooltip } = context
-  const tooltipEl = getOrCreateTooltip(chart)
-
-  // Hide if no tooltip
-  if (tooltip.opacity === 0) {
-    tooltipEl.style.opacity = 0
-    return
-  }
-
-  // Set Text
-  if (tooltip.body) {
-    const titleLines = tooltip.title || []
-    const bodyLines = tooltip.body.map(b => b.lines)
-
-    const tableHead = document.createElement('thead')
-
-    // @ts-expect-error any
-    titleLines.forEach(title => {
-      const tr = document.createElement('tr')
-      tr.style.borderWidth = "0"
-
-      const th = document.createElement('th')
-      th.style.borderWidth = "0"
-
-      // Square
-      const span = document.createElement('span')
-      const colors = tooltip.labelColors[0]
-      span.style.background = colors.backgroundColor
-      span.style.borderColor = colors.borderColor
-      span.style.borderWidth = '2px'
-      span.style.marginRight = '10px'
-      span.style.height = '10px'
-      span.style.width = '10px'
-      span.style.display = 'inline-block'
-      th.appendChild(span)
-
-
-      if (tooltip.dataPoints[0]?.raw.weights) {
-        th.appendChild(document.createTextNode("Efficient Frontier"))
-      } else {
-        if (tooltip.dataPoints[0]?.raw.status) {
-          th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.status))
-        }
-        else if (tooltip.dataPoints[0]?.raw.title) {
-          th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.title))
-        } else {
-          th.appendChild(document.createTextNode(title))
-        }
-      }
-
-      tr.appendChild(th)
-      tableHead.appendChild(tr)
-    })
-
-    const tableBody = document.createElement('tbody')
-    // @ts-expect-error any
-    bodyLines.forEach((body, i) => {
-      const tr2 = document.createElement('tr')
-      const td2 = document.createElement('td')
-      const text2 = document.createTextNode(`Expected Return: ${(tooltip.dataPoints[0]?.raw.y * 100).toFixed(2)}%`)
-      td2.appendChild(text2)
-      tr2.appendChild(td2)
-
-      const tr = document.createElement('tr')
-      tr.style.backgroundColor = 'inherit'
-      tr.style.borderWidth = "0"
-      const td = document.createElement('td')
-      td.style.borderWidth = "0"
-      const text1 = document.createTextNode(`Volatility: ${(tooltip.dataPoints[0]?.raw.x * 100).toFixed(2)}%`)
-      td.appendChild(text1)
-      tr.appendChild(td)
-
-      const tr3 = document.createElement('tr')
-      const td3 = document.createElement('td')
-      const text3 = document.createTextNode(`Sharpe Ratio: ${(tooltip.dataPoints[0]?.raw.y / tooltip.dataPoints[0]?.raw.x).toFixed(2)}`)
-      td3.appendChild(text3)
-      tr3.appendChild(td3)
-
-
-      tableBody.appendChild(tr2)
-      tableBody.appendChild(tr)
-      tableBody.appendChild(tr3)
-
-
-    })
-
-
-    // Remove old children
-    const tableRoot = tooltipEl.querySelector('table')
-    while (tableRoot.firstChild) {
-      tableRoot.firstChild.remove()
-    }
-
-    // Add new children
-    tableRoot.appendChild(tableHead)
-    tableRoot.appendChild(tableBody)
-  }
-
-  // Remove old children
-  const tableRoot = tooltipEl.querySelector('#tooltip-table')
-  while (tableRoot.firstChild) {
-    tableRoot.firstChild.remove()
-  }
-  // Add weights
-  if (tooltip.dataPoints[0]?.raw.weights) {
-    console.log({ tooltipItems: tooltip.dataPoints[0]?.raw.weights })
-    const weights = tooltip.dataPoints[0]?.raw.weights
-
-    if (weights) {
-
-      // Create the table head
-      const thead = document.createElement('thead')
-      thead.style.width = '400px'
-      const headerRow = document.createElement('tr')
-      const tickerHeader = document.createElement('th')
-      tickerHeader.textContent = 'Ticker'
-      const weightHeader = document.createElement('th')
-      weightHeader.textContent = 'Weight'
-      headerRow.appendChild(tickerHeader)
-      headerRow.appendChild(weightHeader)
-      thead.appendChild(headerRow)
-      const table = document.createElement('table')
-      table.appendChild(thead)
-
-      // Create the table body
-      const tbody = document.createElement('tbody')
-      for (const [k, v] of Object.entries(weights)) {
-        const row = document.createElement('tr')
-        // Create a colored square
-        const colorSquare = document.createElement('span')
-        const color = getRandomColor(k)
-        colorSquare.style.background = color
-        colorSquare.style.borderColor = color
-        colorSquare.style.borderWidth = '2px'
-        colorSquare.style.marginRight = '10px'
-        colorSquare.style.height = '10px'
-        colorSquare.style.width = '10px'
-        colorSquare.style.display = 'inline-block'
-
-        const tickerDiv = document.createElement('div')
-        tickerDiv.style.width = '100px'
-        tickerDiv.style.whiteSpace = 'nowrap'
-
-        // Add the color square and the text to the div
-        tickerDiv.appendChild(colorSquare)
-        tickerDiv.appendChild(document.createTextNode(k))
-
-        // Add the div to the ticker cell
-        const tickerCell = document.createElement('td')
-        tickerCell.appendChild(tickerDiv)
-        const weightCell = document.createElement('td')
-        weightCell.textContent = `${(100 * parseFloat(v as string)).toFixed(2)}%`
-        row.appendChild(tickerCell)
-        row.appendChild(weightCell)
-        tbody.appendChild(row)
-      }
-      table.appendChild(tbody)
-
-      // Append
-      const tooltipBody = tooltipEl.querySelector('#tooltip-table')
-      tooltipBody.appendChild(table)
-    }
-  }
-
-  const { offsetLeft: positionX, offsetTop: positionY } = chart.canvas
-
-  // Display, position, and set styles for font
-  tooltipEl.style.opacity = 1
-  tooltipEl.style.left = positionX + tooltip.caretX + 'px'
-  tooltipEl.style.top = positionY + tooltip.caretY + 'px'
-  tooltipEl.style.font = tooltip.options.bodyFont.string
-  tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px'
-}
