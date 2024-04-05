@@ -1,4 +1,4 @@
-import { Box, Card, Flex, Grid, Heading, Select, Skeleton, Spinner, Text } from "@radix-ui/themes"
+import { Box, Card, Flex, Grid, Heading, IconButton, Popover, Skeleton, Spinner, Text, Tooltip } from "@radix-ui/themes"
 import { env } from "~/env"
 import { redirect } from "next/navigation"
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "~/shadcn/Tabs"
@@ -9,19 +9,22 @@ import SelectTicker from "./_components/SelectTicker"
 import { Suspense } from "react"
 import React from "react"
 import z from "zod"
+import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons"
 
 
 
 type Method = {
   label: string
   value: "black-scholes" | "monte-carlo" | "binomial"
+  tooltip?: string
 }
 const METHODS: Method[] = [{
   label: "Black-Scholes",
   value: "black-scholes"
 }, {
   label: "Monte Carlo",
-  value: "monte-carlo"
+  value: "monte-carlo",
+  tooltip: "Monte Carlo is a statistical method that relies on a large number of random trials. This randomness can be seen by refreshing the page, which will show the number jump around with a mean of the correct value. The method can be made arbitrarily accurate by increasing the number of trials (although the computation will take longer)."
 }, {
   label: "Binomial",
   value: "binomial"
@@ -110,17 +113,31 @@ export default async function MPTPage({
 
       <Heading size="5">Results</Heading>
 
-      {methods.map(async ({ label, value }) => (
+      {methods.map(async ({ label, value, tooltip }) => (
         <div key={label} className="flex flex-col gap-4 my-2">
-          <span className="flex flex-col gap-1 w-fit">
-            <Heading size="4" weight="bold" className="w-fit">{label}</Heading>
-            <Box
-              style={{
-                height: "1px",
-                backgroundImage: "linear-gradient(to right, transparent, var(--gray-a5) 30%, var(--gray-a5) 70%, transparent)",
-              }}
-            />
-          </span>
+          <Flex gap="3">
+            <span className="flex flex-col gap-1 w-fit">
+              <Heading size="4" weight="bold" className="w-fit">{label}</Heading>
+              <Box
+                style={{
+                  height: "1px",
+                  backgroundImage: "linear-gradient(to right, transparent, var(--gray-a5) 30%, var(--gray-a5) 70%, transparent)",
+                }}
+              />
+            </span>
+            {tooltip && <Popover.Root>
+              <Popover.Trigger>
+                <IconButton variant="ghost" color="gray">
+                  <InfoCircledIcon />
+                </IconButton>
+              </Popover.Trigger>
+              <Popover.Content width="360px">
+                <Text size="2">{tooltip}</Text>
+              </Popover.Content>
+            </Popover.Root>
+
+            }
+          </Flex>
           <div className="flex gap-4">
             <div className="w-1/2">
               <Heading size="4" color="gray">Call Option</Heading>
@@ -174,7 +191,8 @@ async function fetchOptionPrice({
   }
   console.log("fetching", `${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(requestParams)}`)
   return fetch(`${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(requestParams)}`, {
-    cache: env.NODE_ENV === "development" ? 'no-store' : 'force-cache'
+    // Don't cache monte-carlo to show randomness
+    cache: (env.NODE_ENV === "production" && method !== "monte-carlo") ? 'force-cache' : 'no-store'
   }).then(async res => {
     // console.log({ res })
     if (!res.ok) {

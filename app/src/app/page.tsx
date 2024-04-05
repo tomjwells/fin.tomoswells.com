@@ -1,4 +1,5 @@
-import { Container, Flex, Heading, Text, Card, Link } from "@radix-ui/themes"
+import { InfoCircledIcon } from "@radix-ui/react-icons"
+import { Container, Flex, Heading, Text, Card, Link, Callout } from "@radix-ui/themes"
 import NextLink from "next/link"
 
 
@@ -24,6 +25,15 @@ export default function HomePage() {
             <Link asChild><NextLink href="/timeseries">Timeseries Forecasting</NextLink></Link>
           </li>
         </ul>
+
+        <Callout.Root variant="surface">
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            None of the information on this website should be considered as investment or financial advice.
+          </Callout.Text>
+        </Callout.Root>
 
       </Flex>
     </Card>

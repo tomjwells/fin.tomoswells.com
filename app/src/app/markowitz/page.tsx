@@ -165,6 +165,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
             <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} />
           </Suspense>
         </Box>
+        <Heading size="4">Metrics of The Tangency Portfolio </Heading>
         <div className="flex flex-col gap-4">
           <div className="flex gap-4">
             <div className="w-1/2">

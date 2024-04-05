@@ -5,6 +5,7 @@ sys.path.append('..')
 import gzip
 import json
 import time
+import random
 from typing import List
 from flask import Flask, request
 from flask_caching import Cache
@@ -104,7 +105,7 @@ def get_option_price():
   r: float = get_risk_free_rate()
   S_0, sigma = get_stock_data(ticker)
 
-  print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
+  # print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
 
   if method == 'binomial':
     if option_type == 'european':
@@ -119,9 +120,9 @@ def get_option_price():
       return jsonify({"error": "American options are not supported"})
     
   if method == 'monte-carlo':
-    num_trials = int(1e3)
+    num_trials = int(5e4)
     if option_type == 'european':
-      return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials))
+      return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials, seed=random.randint(0,1e6)))
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported yet"})
 

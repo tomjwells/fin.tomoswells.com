@@ -2,10 +2,6 @@ import math
 
 import numpy as np
 from typing import Literal
-from datetime import datetime, timedelta
-import yfinance as yf
-import pandas as pd
-import time
 
 
 def norm_cdf(x: float) -> float:
@@ -22,9 +18,9 @@ def monte_carlo(option_type: Literal['call', 'put'], S_0: float, K: float,  tau:
         3) We discount the payoff at the risk-free rate to today’s price
   """
   # The time unit is years
-  dt_in_years = tau / num_timesteps
-  nudt = (r - 0.5 * sigma ** 2) * (dt_in_years)
-  volsdt = sigma * np.sqrt(dt_in_years) 
+  dt = tau / num_timesteps
+  nudt = (r - 0.5 * sigma ** 2) * (dt)
+  volsdt = sigma * np.sqrt(dt) 
   lnS_0 = np.log(S_0)
 
   np.random.seed(seed)

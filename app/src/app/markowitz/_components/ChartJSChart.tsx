@@ -191,7 +191,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         border: { dash: [4, 4] }, // for the grid lines
         title: {
           display: true,
-          text: 'Risk',
+          text: 'Volatility',
           color: 'rgba(256, 256, 256, 0.9)', // grey color
           font: {
             size: 16, // set font size to 14
@@ -339,7 +339,6 @@ export function getRandomColor(str: string) {
 
 
 // Tooltip
-// @ts-expect-error any
 const getOrCreateTooltip = (chart) => {
   let tooltipEl = chart.canvas.parentNode.querySelector('div')
 
@@ -367,7 +366,6 @@ const getOrCreateTooltip = (chart) => {
   return tooltipEl
 }
 
-// @ts-expect-error any
 const externalTooltipHandler = (context) => {
   // Tooltip Element
   const { chart, tooltip } = context
@@ -382,7 +380,6 @@ const externalTooltipHandler = (context) => {
   // Set Text
   if (tooltip.body) {
     const titleLines = tooltip.title || []
-    // @ts-expect-error any
     const bodyLines = tooltip.body.map(b => b.lines)
 
     const tableHead = document.createElement('thead')
@@ -394,6 +391,20 @@ const externalTooltipHandler = (context) => {
 
       const th = document.createElement('th')
       th.style.borderWidth = "0"
+
+      // Square
+      const span = document.createElement('span')
+      const colors = tooltip.labelColors[0]
+      span.style.background = colors.backgroundColor
+      span.style.borderColor = colors.borderColor
+      span.style.borderWidth = '2px'
+      span.style.marginRight = '10px'
+      span.style.height = '10px'
+      span.style.width = '10px'
+      span.style.display = 'inline-block'
+      th.appendChild(span)
+
+
       if (tooltip.dataPoints[0]?.raw.weights) {
         th.appendChild(document.createTextNode("Efficient Frontier"))
       } else {
@@ -414,31 +425,31 @@ const externalTooltipHandler = (context) => {
     const tableBody = document.createElement('tbody')
     // @ts-expect-error any
     bodyLines.forEach((body, i) => {
-      const colors = tooltip.labelColors[i]
-
-      const span = document.createElement('span')
-      span.style.background = colors.backgroundColor
-      span.style.borderColor = colors.borderColor
-      span.style.borderWidth = '2px'
-      span.style.marginRight = '10px'
-      span.style.height = '10px'
-      span.style.width = '10px'
-      span.style.display = 'inline-block'
+      const tr2 = document.createElement('tr')
+      const td2 = document.createElement('td')
+      const text2 = document.createTextNode(`Expected Return: ${(tooltip.dataPoints[0]?.raw.y * 100).toFixed(2)}%`)
+      td2.appendChild(text2)
+      tr2.appendChild(td2)
 
       const tr = document.createElement('tr')
       tr.style.backgroundColor = 'inherit'
       tr.style.borderWidth = "0"
-
       const td = document.createElement('td')
       td.style.borderWidth = "0"
-
-      console.log({ body })
-      const text = document.createTextNode(`Risk:${tooltip.dataPoints[0]?.raw.x.toFixed(2)} Return: ${tooltip.dataPoints[0]?.raw.y.toFixed(2)}`)
-
-      td.appendChild(span)
-      td.appendChild(text)
+      const text1 = document.createTextNode(`Volatility: ${(tooltip.dataPoints[0]?.raw.x * 100).toFixed(2)}%`)
+      td.appendChild(text1)
       tr.appendChild(td)
+
+      const tr3 = document.createElement('tr')
+      const td3 = document.createElement('td')
+      const text3 = document.createTextNode(`Sharpe Ratio: ${(tooltip.dataPoints[0]?.raw.y / tooltip.dataPoints[0]?.raw.x).toFixed(2)}`)
+      td3.appendChild(text3)
+      tr3.appendChild(td3)
+
+
+      tableBody.appendChild(tr2)
       tableBody.appendChild(tr)
+      tableBody.appendChild(tr3)
 
 
     })
@@ -469,6 +480,7 @@ const externalTooltipHandler = (context) => {
 
       // Create the table head
       const thead = document.createElement('thead')
+      thead.style.width = '400px'
       const headerRow = document.createElement('tr')
       const tickerHeader = document.createElement('th')
       tickerHeader.textContent = 'Ticker'
@@ -486,7 +498,7 @@ const externalTooltipHandler = (context) => {
         const row = document.createElement('tr')
         // Create a colored square
         const colorSquare = document.createElement('span')
-        const color = getRandomColor(k)!
+        const color = getRandomColor(k)
         colorSquare.style.background = color
         colorSquare.style.borderColor = color
         colorSquare.style.borderWidth = '2px'
@@ -494,12 +506,6 @@ const externalTooltipHandler = (context) => {
         colorSquare.style.height = '10px'
         colorSquare.style.width = '10px'
         colorSquare.style.display = 'inline-block'
-        // const colorSquare = document.createElement('div')
-        // colorSquare.style.width = '20px'
-        // colorSquare.style.height = '20px'
-        // colorSquare.style.backgroundColor = getRandomColor(k)
-        // colorSquare.style.display = 'inline-block'
-        // colorSquare.style.marginRight = '5px'
 
         const tickerDiv = document.createElement('div')
         tickerDiv.style.width = '100px'
