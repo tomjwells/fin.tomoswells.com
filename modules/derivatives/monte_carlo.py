@@ -9,7 +9,7 @@ def norm_cdf(x: float) -> float:
 def norm_pdf(x: float) -> float:
   return (1 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * x ** 2)
 
-def monte_carlo(option_type: Literal['call', 'put'], S_0: float, K: float,  tau: float, r: float, sigma: float, num_trials: int = 100, seed: int = 1234, num_timesteps: int = 1000) -> float:
+def monte_carlo(option_type: Literal['call', 'put'], S_0: float, K: float,  tau: float, r: float, sigma: float, num_trials: int = 100, seed: int = 1234, num_timesteps: int = 100) -> float:
   """
     Description:
       The MC simulation consists of three main steps. 

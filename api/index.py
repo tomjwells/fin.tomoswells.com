@@ -120,9 +120,10 @@ def get_option_price():
       return jsonify({"error": "American options are not supported"})
     
   if method == 'monte-carlo':
-    num_trials = int(1e4)
+    num_trials = int(2e5)
+    num_timesteps = 200
     if option_type == 'european':
-      return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials, seed=random.randint(0,1e6)))
+      return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0,int(1e6))))
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported yet"})
 
