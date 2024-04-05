@@ -31,7 +31,7 @@ export default function HomePage() {
             <InfoCircledIcon />
           </Callout.Icon>
           <Callout.Text>
-            None of the information on this website should be considered as investment or financial advice.
+            None of the information on this website should be interpreted as financial or investment advice.
           </Callout.Text>
         </Callout.Root>
 
