@@ -30,11 +30,6 @@ export default tseslint.config(
       parser: tseslint.parser,
       parserOptions: { project: true },
     },
-    // extends: [
-    //   "next/core-web-vitals",
-    //   "plugin:@typescript-eslint/recommended-type-checked",
-    //   "plugin:@typescript-eslint/stylistic-type-checked",
-    // ],
     rules: {
       // Custom
       "semi": ["warn", "never"],

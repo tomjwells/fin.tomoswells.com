@@ -46,12 +46,13 @@ export default async function MPTPage({
     <Flex direction="column" gap="2" my="4">
 
       <Heading size="3">Choose some assets to consider for your candidate portfolio.</Heading>
+      <Text size="1" color="gray">Hint: Try typing to quickly find a particular ticker.</Text>
 
       <FancyMultiSelect
         assets={await fetchAssets()}
         pageParams={pageParams}
       />
-      <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is highlighted in lighter blue.</Text>
+      <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is indicated by the solid white line.</Text>
 
       <div className="my-4">
         <Heading size="3">Risk free rate</Heading>
