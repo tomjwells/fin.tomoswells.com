@@ -13,50 +13,59 @@ Each subdirectory serves a different purpose. Understanding the structure will h
 2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
 2. `math` - Contains pdfs explaining any mathematics I consider "non-obvious", which is implemented in the code.
 
-# Topics
+# Options Pricing ([link](https://fin.tomoswells.com/derivatives))
 
-## Options Pricing
+The options pricing page the application of various pricing methodologies to the pricing of European and American options.
 
-Options pricing is implemented using the Black-Scholes model, a monte-carlo model and a binomial tree model. All three methods are applied to pricing European options, and only the binomial model is applied to pricing American options since American options are path dependent.
+The following methods are applied to the pricing of European options:
+  - [Black-Scholes analytical solution](https://github.com/tomjwells/finance/blob/master/modules/derivatives/black_scholes.py) 
+  - [Monte Carlo simulations](https://github.com/tomjwells/finance/blob/master/modules/derivatives/monte_carlo.py) of geometric Brownian motion
+  - [The Binomial Tree method](https://github.com/tomjwells/finance/blob/master/modules/derivatives/binomial_model.py)
 
-- **Monte Carlo Simulations**: This method involves running a large number of trials to model the price of an underlying asset, taking into account factors such as volatility and time to expiration. 
+The following methods are applied to the pricing of American options:
+  - [The Binomial Tree method](https://github.com/tomjwells/finance/blob/master/modules/derivatives/binomial_model.py)
 
-- **Implied Volatility**: The Newton-Raphson method is used in conjunction with the Black-Scholes formula to estimate the implied volatility of an asset.
+The user may select an equity from the S&P500, a maturity date and a strike price for the option.
 
-## Modern Portfolio Theory
+See [./modules/derivatives](https://github.com/tomjwells/finance/tree/master/modules/derivatives) for the Python files implementing these algorithms.
 
-Harry Markowitz's Modern Portfolio Theory is a model that provides a way of defining portfolios that are *efficient*. An eficient potfolio is one that has the highest reward for a given level of risk. This tool calculates the frontier of efficient portfolios from a user-selectable basket of equities.
+
+# Modern Portfolio Theory ([link](https://fin.tomoswells.com/markowitz))
+
+Modern Portfolio Theory (MPT) is a model that provides a way of finding the most  *efficient* portfolios given a basked of possible assets. An efficient potfolio in this context, is one that provides the highest possible expected return for a given level of volatility, or "risk".
+
+This tool calculates the frontier of efficient portfolios from a user-selectable basket of equities. The capital allocation line is also plotted and the tangency portfolio for the basket of assets is calculated, along with relevant metrics such as the Sharpe and Sortino ratios. The user may also specify their own parameters for the calculation, such as the risk-free rate, and the number of years to be considered when evaluating the historical mean return and volatility of the asset.
+
+A derivation of the necessary algebra to find the efficient frontier analytically is provided in [Markowitz_Theory.pdf](https://github.com/tomjwells/finance/blob/master/modules/markowitz/Markowitz_Theory.pdf).
+
+The code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
 
 # Running the Project
 
-It is worth noting that many generic tasks have aliases already created for them, in the file `aliases.sh`. 
+Generic tasks related to running the project have aliases created for them, which are defined in the file `aliases.sh`. 
 
-To make these available in your shell, run
+To make these aliases available in your shell, run
 ```
 source aliases.sh
 ```
 
-In general these aliased commands can involve changing the directory, so it is best to run them from the root of the project if unsure.
-
 ## Flask
 
 To install the Python dependencies, use the alias
-```pyenv```
-which will set up a new environment using `pip`.
+```
+pyenv
+```
+which will install the necessary libraries using `pip`.
 
-The flask application may be run using
+The flask application may be launched using
 ```
 runflask
 ```
-which causes it to be accessible on port `8000`.
+making it accessible on port `8000`.
 
 ## Next.js
 
-Bun is used as the package manager. To install dependencies use the alias `i`. To run Next, use the alias `r`.
-
-
-
-
+To install dependencies use the alias `i`. To run the application, use the alias `r`.
 
 ## Contact
 If you have any questions or suggestions, please feel free to get in touch.

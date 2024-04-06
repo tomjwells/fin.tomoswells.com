@@ -14,11 +14,8 @@ import pickle
 
 r = redis.Redis.from_url(url=os.getenv("KV_URL").replace("redis://", "rediss://"))
 
-
+# Decorator to cache the result of a function using Redis
 def cache(func):
-  """
-    Decorator to cache the result of a function using Redis
-  """
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
     key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
@@ -33,7 +30,8 @@ def cache(func):
   return wrapper
 
 
-
+# Cache the returns data to prevent redundant repeated download of the same
+# information from Yahoo finance, and speed up the calculation.
 @cache
 def get_returns(ticker: str) -> pd.Series:
   for _ in range(int(1e5)): 
@@ -87,7 +85,7 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]],Sigma: np.ndarray[Any, 
   d = a * f - c * c
   var_p = ((1.0/d) * (f * (R_p_linspace ** 2) - 2 *  c * R_p_linspace + a)).tolist()
 
-  # Also calculate the weights
+  # Calculate the portfolio weights along the efficient frontier
   weights = []
   for R_p in R_p_linspace:
     lambda_1 = (1.0/d) * (f * R_p - c)

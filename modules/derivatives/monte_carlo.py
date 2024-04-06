@@ -31,7 +31,6 @@ def monte_carlo(option_type: Literal['call', 'put'], S_0: float, K: float,  tau:
   Z = np.random.normal(size=(num_timesteps, num_trials))
   delta_lnS_t = nudt + volsdt*Z
   lnS_t = lnS_0 + np.cumsum(delta_lnS_t, axis=0) # axis=0 performs the summation over time steps
-  # lnS_t = np.concatenate((np.full(shape=(1, num_trials), fill_value=lnS_0), lnS_T ) )
   lnS_T = lnS_t[-1]
   S_T = np.exp(lnS_T)
 
