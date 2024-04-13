@@ -12,7 +12,7 @@ Each subdirectory of this repository serves a different purpose. Understanding t
 1. `app` - Hosts a Next.js frontend for the application.
 2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
 
-# Options Pricing ([fin.tomoswells.com/derivatives](https://fin.tomoswells.com/derivatives))
+# Options Pricing ([link](https://fin.tomoswells.com/derivatives))
 
 The options pricing page applies various pricing techniques to the pricing of European and American options.
 
@@ -29,7 +29,7 @@ The user may select an equity from the S&P500, a maturity date and a strike pric
 See [./modules/derivatives](https://github.com/tomjwells/finance/tree/master/modules/derivatives) for the Python files implementing these algorithms.
 
 
-# Modern Portfolio Theory ([fin.tomoswells.com/markowitz](https://fin.tomoswells.com/markowitz))
+# Modern Portfolio Theory ([link](https://fin.tomoswells.com/markowitz))
 
 Modern Portfolio Theory (MPT) is a model that provides a way of finding the most  *efficient* portfolios given a basked of possible assets. An efficient potfolio in this context, is one that provides the highest possible expected return for a given level of volatility, or "risk".
 
