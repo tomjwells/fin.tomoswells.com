@@ -261,7 +261,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         showLine: false // no line for this dataset
       },
       {
-        label: 'Capital Allocation Line',
+        label: 'Capital Market Line',
         data: [{ x: 0, y: riskFreeRate, title: "Risk-free Rate" }, {
           x: slope * X_MAX + riskFreeRate > Y_MAX ? (Y_MAX - riskFreeRate) / slope : X_MAX,
           y: slope * X_MAX + riskFreeRate > Y_MAX ? Y_MAX : slope * X_MAX + riskFreeRate
