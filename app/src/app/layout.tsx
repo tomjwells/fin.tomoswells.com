@@ -11,6 +11,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/react"
 
 import { Container, Flex, Theme } from "@radix-ui/themes"
+import { env } from "~/env"
 export const runtime = "edge"
 
 
@@ -65,7 +66,11 @@ function Nav() {
               <TabsTrigger value="/" className="w-full sm:w-auto"><HomeIcon /></TabsTrigger>
               <TabsTrigger value="/derivatives" className="w-full sm:w-auto">Options Pricing</TabsTrigger>
               <TabsTrigger value="/markowitz" className="w-full sm:w-auto">Modern Portfolio Theory</TabsTrigger>
-              <TabsTrigger value="/timeseries" className="w-full sm:w-auto">Timeseries Forecasting</TabsTrigger>
+              {
+                env.NODE_ENV === "development" && (
+                  <TabsTrigger value="/timeseries" className="w-full sm:w-auto">Timeseries Forecasting</TabsTrigger>
+                )
+              }
             </TabsList>
           </Tabs>
         </Suspense>

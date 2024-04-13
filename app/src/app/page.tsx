@@ -1,6 +1,7 @@
 import { InfoCircledIcon } from "@radix-ui/react-icons"
 import { Flex, Heading, Text, Card, Link, Callout } from "@radix-ui/themes"
 import NextLink from "next/link"
+import { env } from "~/env";
 
 
 export default function HomePage() {
@@ -21,9 +22,13 @@ export default function HomePage() {
           <li >
             <Link asChild><NextLink href="/markowitz">Modern Portfolio Theory</NextLink></Link>
           </li>
-          <li >
-            <Link asChild><NextLink href="/timeseries">Timeseries Forecasting</NextLink></Link>
-          </li>
+          {
+            env.NODE_ENV === "development" && (
+              <li >
+                <Link asChild><NextLink href="/timeseries">Timeseries Forecasting</NextLink></Link>
+              </li>
+            )
+          }
         </ul>
 
         <Callout.Root variant="surface">
