@@ -77,7 +77,7 @@ def get_stock_price(ticker: str):
 
 ######### Derivatives
 
-from modules.derivatives.black_scholes import black_scholes
+from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.binomial_model import EUPrice, USPrice
 from datetime import datetime
@@ -116,7 +116,8 @@ def get_option_price():
 
   if method == 'black-scholes':
     if option_type == 'european':
-      return jsonify(black_scholes(instrument, S_0, sigma, K, tau,r))
+      bs = black_scholes_option(S_0, K, tau, r, sigma)
+      return jsonify(bs.value(instrument))
     if option_type == 'american':
       return jsonify({"error": "American options are not supported"})
     

@@ -33,7 +33,7 @@ export default async function MPTPage({
     pageParams = pageParamsSchema.parse(searchParams)
   } catch (e) {
     const params = new URLSearchParams();
-    const defaultAssets = ["META", "AAPL", "GOOGL", "TSLA", "MSFT", "AMD"]
+    const defaultAssets = ["META", "AAPL", "TSLA", "MSFT", "NFLX", "AMD"]
     defaultAssets.forEach((asset) => params.append('assets', asset))
     params.append('r', `${await getRiskFreeRate()}`)
     params.append('startYear', `${(new Date()).getFullYear() - 10}`)
@@ -46,7 +46,7 @@ export default async function MPTPage({
     <Flex direction="column" gap="2" my="4">
 
       <Heading size="3">Choose some assets to consider for your candidate portfolio.</Heading>
-      <Text size="1" color="gray">Hint: Try typing to quickly find a particular ticker.</Text>
+      <Text size="1" color="gray">Hint: Try typing to filter for a particular ticker.</Text>
 
       <FancyMultiSelect
         assets={await fetchAssets()}
