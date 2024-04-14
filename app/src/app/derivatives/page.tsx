@@ -48,12 +48,13 @@ export default async function MPTPage({
   params: { slug: string }
   searchParams: Record<string, string | string[] | undefined>
 }) {
+  const ticker = pageParamsSchema.shape.ticker.safeParse(searchParams.ticker).success ? searchParams?.ticker as PageParams["ticker"] : 'TSLA'
   // Validate query params
   if (!pageParamsSchema.safeParse(searchParams).success) redirect(`?${new URLSearchParams({
     optionType: pageParamsSchema.shape.optionType.safeParse(searchParams.optionType).success ? searchParams?.optionType as PageParams["optionType"] : "european",
     T: pageParamsSchema.shape.T.safeParse(searchParams.T).success ? searchParams?.T as PageParams["T"] : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
-    K: pageParamsSchema.shape.K.safeParse(searchParams.K).success ? searchParams?.K as PageParams["K"] : '100',
-    ticker: pageParamsSchema.shape.ticker.safeParse(searchParams.ticker).success ? searchParams?.ticker as PageParams["ticker"] : 'TSLA',
+    ticker,
+    K: pageParamsSchema.shape.K.safeParse(searchParams.K).success ? searchParams?.K as PageParams["K"] : (await fetchUnderlyingPrice(ticker)).toFixed(0),
   })}`)
 
 
@@ -97,7 +98,7 @@ export default async function MPTPage({
         <Suspense fallback={<Skeleton>Loading</Skeleton>}>
           <SetStrike
             pageParams={pageParams}
-            currentPrice={(await fetch(`${env.APP_URL}/api/stock/${pageParams.ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price}
+            currentPrice={await fetchUnderlyingPrice(pageParams.ticker)}
           />
         </Suspense>
       </Grid>
@@ -215,3 +216,5 @@ async function fetchOptionPrice({
     return await res.json() as number
   })
 }
+
+const fetchUnderlyingPrice = async (ticker: string) => (await fetch(`${env.APP_URL}/api/stock/${ticker}`, { next: { revalidate: 60 } }).then(r => r.json()) as { price: number }).price
