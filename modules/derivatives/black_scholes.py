@@ -8,6 +8,13 @@ def norm_pdf(x: float) -> float:
   return (1 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * x ** 2)
 
 class black_scholes_option(object):
+  S0: float
+  K: float
+  tau: float
+  r: float
+  sigma: float
+  d1: float
+  d2: float
    
   def __init__(self, S0: float, K: float, tau: float, r: float, sigma: float):
     """

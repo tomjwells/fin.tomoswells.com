@@ -105,7 +105,7 @@ def get_option_price():
   r: float = get_risk_free_rate()
   S_0, sigma = get_stock_data(ticker)
 
-  # print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
+  print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
 
   if method == 'binomial':
     num_steps = int(1e3)
