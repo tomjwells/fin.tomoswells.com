@@ -28,15 +28,15 @@ ChartJS.register(
 import {
   blue,
   indigo,
-  green,
+  jade,
   amber,
   cyan, sky,
   iris, grass, teal,
 
 } from '@radix-ui/colors'
-const colors = [blue, indigo, green, cyan, sky, iris, grass, teal]
+const colors = [blue, indigo, jade, cyan, sky, iris, grass, teal]
 
-const tangentPortfolioColour = '#FFF' ?? amber.amber6
+const tangentPortfolioColour = '#FFF'
 
 type TangencyPortfolio = {
   weights: number[]
@@ -366,7 +366,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         border: { dash: [4, 4] }, // for the grid lines
         title: {
           display: true,
-          text: 'Volatility',
+          text: 'Expected Volatility',
           color: 'rgba(256, 256, 256, 0.9)', // grey color
           font: {
             size: 16, // set font size to 14
@@ -402,7 +402,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         max: Y_MAX, // set maximum value
         title: {
           display: true,
-          text: 'Return',
+          text: 'Expected Return',
           color: 'rgba(256, 256, 256, 0.9)', // grey color
           font: {
             size: 16,

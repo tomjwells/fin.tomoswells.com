@@ -2,7 +2,7 @@
 
 
 @theme {
-  --color-background: #0E0E10;
+  --color-background: #171717;
   --color-foreground: hsl(0 0% 98%);
   --color-card: hsl(240 10% 3.9%);
   --color-card-foreground: hsl(0 0% 98%);
@@ -12,7 +12,7 @@
   --color-primary-foreground: hsl(240 5.9% 10%);
   --color-secondary: hsl(240 3.7% 15.9%);
   --color-secondary-foreground: hsl(0 0% 98%);
-  --color-muted: hsl(240 3.7% 15.9%);
+  --color-muted: #1C1C1C;
   --color-muted-foreground: hsl(240 5% 64.9%);
   --color-accent: hsl(240 3.7% 15.9%);
   --color-accent-foreground: hsl(0 0% 98%);
@@ -52,4 +52,8 @@
 
 button {
   cursor: pointer;
+}
+
+.radix-themes {
+  --base-card-surface-box-shadow: 0 0 0 1px rgb(41, 41, 41);
 }

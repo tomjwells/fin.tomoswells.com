@@ -45,7 +45,7 @@ export default async function MPTPage({
     <Heading size="6">Modern Portfolio Theory</Heading>
     <Flex direction="column" gap="2" my="4">
 
-      <Heading size="3">Choose some assets to consider for your candidate portfolio.</Heading>
+      <Heading size="3">Choose a collection of assets to consider for a candidate portfolio.</Heading>
       <Text size="1" color="gray">Hint: Try typing to filter for a particular ticker.</Text>
 
       <FancyMultiSelect
@@ -57,8 +57,8 @@ export default async function MPTPage({
       <div className="my-4">
         <Heading size="3">Risk free rate</Heading>
         <Suspense>
+          <Text size="2">The default value for risk free rate is chosen to be current value of the three-month U.S. Treasury bill, but it can be changed to any other rate.</Text>
           <RiskFreeRateSlider r={pageParams.r} />
-          <Text size="2">The default value for risk free rate is chosen to be three-month U.S. Treasury bill, but you can change it to any other rate.</Text>
         </Suspense>
       </div>
 
@@ -66,10 +66,12 @@ export default async function MPTPage({
 
 
 
+
       <Suspense fallback={<Flex justify="center" align="center" height="400px"><Spinner size="3" /></Flex>}>
-        <Heading size="3">Results</Heading>
+        <Heading size="5" mt="4">Results</Heading>
         <ResultsSection pageParams={pageParams} searchParams={searchParams} />
       </Suspense>
+
 
 
     </Flex>
@@ -160,14 +162,16 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
 
 
     return (
-      <>
-        <Box height="600px" width="9" p="4">
-          <Suspense>
-            <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} />
-          </Suspense>
-        </Box>
-        <Heading size="4">Metrics of The Tangency Portfolio </Heading>
+      <Flex direction="column" gap="6" >
+        <Card className="bg-muted !p-4">
+          <Box height="600px" width="9" p="4">
+            <Suspense>
+              <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} />
+            </Suspense>
+          </Box>
+        </Card>
         <div className="flex flex-col gap-4">
+          <Heading size="5">Metrics</Heading>
           <div className="flex gap-4">
             <div className="w-1/2">
               <Heading size="4" color="gray">Expected Return</Heading>
@@ -189,12 +193,11 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
             </div>
           </div>
         </div>
-        <br />
-        <Heading size="4">The Tangency Portfolio</Heading>
         <Suspense>
+          <Heading size="4">The Tangency Portfolio</Heading>
           <TangencyPortfolioPieChart tangencyPortfolio={tangencyPortfolio} pageParams={pageParams} />
         </Suspense>
-      </>
+      </Flex >
     )
   } catch (error) {
     console.error(JSON.stringify(error))

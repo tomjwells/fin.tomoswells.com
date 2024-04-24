@@ -97,7 +97,7 @@ def get_option_price():
   T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')
   if t > T:
     return jsonify({"error": f"t: {t} should be less than T: {T}"}), 400
-  tau = (T - t).total_seconds() / 31557600
+  tau = (T - t).days / 365
   K: float = float(request.args.get('K'))
   assert isinstance(K, (float)), "K should be a float"
   ticker = request.args.get('ticker')
@@ -122,8 +122,8 @@ def get_option_price():
       return jsonify({"error": "American options are not supported"})
     
   if method == 'monte-carlo':
-    num_trials = int(2e5)
-    num_timesteps = 200
+    num_trials = int(1e5)
+    num_timesteps = 100
     if option_type == 'european':
       return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0,int(1e6))))
     elif option_type == 'american':
