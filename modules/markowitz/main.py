@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List, Any
+from typing import Tuple, List, Any
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -30,8 +30,7 @@ def cache(func):
   return wrapper
 
 
-# Cache the returns data to prevent redundant repeated download of the same
-# information from Yahoo finance, and speed up the calculation.
+# Cache the returns data to prevent redundant repeated downloads
 @cache
 def get_returns(ticker: str) -> pd.Series:
   for _ in range(int(1e5)): 
@@ -49,7 +48,7 @@ def get_returns(ticker: str) -> pd.Series:
   return stock_data
 
 
-def download_data(ticker: str):
+def download_data(ticker: str) -> pd.Series:
   """
     Downloads the adjusted close prices for a given ticker and calculates the daily returns
   """
@@ -76,23 +75,21 @@ def estimate_ret_and_cov(tickers: List[str], start_date: str, end_date: str) -> 
 
   return filtered_stock_returns, cov_matrix
 
-def efficient_frontier(mu: npt.NDArray[np.floating[Any]],Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> List[float]:
+def efficient_frontier(mu: npt.NDArray[np.floating[Any]],Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[List[float], List[float]]:
   inv_Sigma = np.linalg.inv(Sigma)
   ones = np.ones(len(mu))
   a = mu.T @ inv_Sigma @ mu
   c = mu.T @ inv_Sigma @ ones
   f = ones.T @ inv_Sigma @ ones
   d = a * f - c * c
-  var_p = ((1.0/d) * (f * (R_p_linspace ** 2) - 2 *  c * R_p_linspace + a)).tolist()
+  var_p = (1.0/d) * (f * (R_p_linspace ** 2) - 2 *  c * R_p_linspace + a)
 
   # Calculate the portfolio weights along the efficient frontier
-  weights = []
-  for R_p in R_p_linspace:
-    lambda_1 = (1.0/d) * (f * R_p - c)
-    lambda_2 = (-1.0/d) * (c * R_p - a)
-    weights.append((lambda_1 * inv_Sigma @ mu + lambda_2 * inv_Sigma @ ones).tolist())
+  lambda_1 = (+1.0/d) * (f * R_p_linspace - c)
+  lambda_2 = (-1.0/d) * (c * R_p_linspace - a)
+  weights = lambda_1[:, None] * (inv_Sigma @ mu) + lambda_2[:, None] * (inv_Sigma @ ones)
 
-  return var_p, weights
+  return var_p.tolist(), weights.tolist()
 
 def main(tickers: List[str], startYear: int, endYear: int):
   start_date = f'{startYear}-01-01'
@@ -102,7 +99,7 @@ def main(tickers: List[str], startYear: int, endYear: int):
   # Estimate the expected returns
   print(stock_returns.head())
   print(252 * stock_returns.mean().values)
-  mu: npt.NDArray[np.floating[Any]] = 252 * stock_returns.mean().values
+  mu = 252 * stock_returns.mean().values
   Sigma = 252 * cov_matrix.values
 
   # Calculate the efficient frontier
@@ -123,5 +120,5 @@ def main(tickers: List[str], startYear: int, endYear: int):
     "Sigma_inverse": np.around(np.linalg.inv(Sigma),6).tolist(),
     "data": [{ "return": round(R_p_linspace[i],4), "risk": round(sigma_p[i],4), "weights": np.around(weights[i],4).tolist() } for i in range(len(R_p_linspace))],
     "asset_datapoints": [{"ticker": ticker, "return": round(mu[i], 4), "risk":round( np.sqrt(Sigma[i][i]), 4)} for i, ticker in enumerate(tickers)],
-    "returns": [[round(val, 6) for val in stock_returns[ticker].fillna(0).tolist()] for i, ticker in enumerate(tickers)]
+    "returns": [[round(val, 6) for val in stock_returns[ticker].fillna(0).tolist()] for ticker in tickers]
   }

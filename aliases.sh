@@ -1,5 +1,5 @@
 # Usage: source ./aliases.sh
-HOMEDIR="$(cd "$(dirname "$0")"; pwd -P)"
+HOMEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd -P)"
 
 #############################################
 # Install Commands
@@ -15,6 +15,7 @@ alias runflask="cd $HOMEDIR/api && export FLASK_APP=index.py && export FLASK_ENV
 
 
 # Misc
+alias clean="rm -rf $HOMEDIR/app/.next $HOMEDIR/app/node_modules"
 alias p="portkill 3000 8000 > /dev/null || true"
 
 
