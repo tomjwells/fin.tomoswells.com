@@ -82,11 +82,12 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]],Sigma: np.ndarray[Any, 
   c = mu.T @ inv_Sigma @ ones
   f = ones.T @ inv_Sigma @ ones
   d = a * f - c * c
-  var_p = (1.0/d) * (f * (R_p_linspace ** 2) - 2 *  c * R_p_linspace + a)
+  one_over_d = 1.0 / d
+  var_p = one_over_d * (f * (R_p_linspace ** 2) - 2 *  c * R_p_linspace + a)
 
   # Calculate the portfolio weights along the efficient frontier
-  lambda_1 = (+1.0/d) * (f * R_p_linspace - c)
-  lambda_2 = (-1.0/d) * (c * R_p_linspace - a)
+  lambda_1 = + one_over_d * (f * R_p_linspace - c)
+  lambda_2 = - one_over_d * (c * R_p_linspace - a)
   weights = lambda_1[:, None] * (inv_Sigma @ mu) + lambda_2[:, None] * (inv_Sigma @ ones)
 
   return var_p.tolist(), weights.tolist()
