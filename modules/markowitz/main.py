@@ -16,7 +16,7 @@ import functools
 import pickle
 
 r = redis.Redis.from_url(url=os.getenv(
-    "KV_URL").replace("redis://", "rediss://"))
+    "REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
 

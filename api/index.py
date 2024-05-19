@@ -21,7 +21,7 @@ import os
 
 app = Flask(__name__)
 app.config["CACHE_REDIS_URL"] = os.environ.get(
-    "KV_URL").replace("redis://", "rediss://")
+    "REDIS_URL").replace("redis://", "rediss://")
 cache = Cache(app, config={'CACHE_TYPE': 'RedisCache'})
 timeout = 7*24*60*60
 
