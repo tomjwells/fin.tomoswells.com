@@ -8,7 +8,7 @@ import pandas as pd
 import yfinance as yf
 import numpy.typing as npt
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from multiprocessing import Pool
+
 
 import redis
 import functools
@@ -135,9 +135,9 @@ def efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace):
   A = matrix(np.vstack([np.array(mu), np.ones(N)]))
 
   # Parallelize the quadratic optimization step over each of the R_p linspace
-  with Pool() as pool:
-    portfolios = pool.starmap(calculate_portfolio, [(
-        R_p, S, q, G, h, A) for R_p in R_p_linspace])
+  with ThreadPoolExecutor() as executor:
+    portfolios = list(executor.map(calculate_portfolio, [
+        (R_p, S, q, G, h, A) for R_p in R_p_linspace]))
 
   # CALCULATE RISKS AND RETURNS FOR FRONTIER
   weights = np.array(portfolios).squeeze()
