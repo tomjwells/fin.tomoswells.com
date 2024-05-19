@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 import numpy.typing as npt
-from scipy.optimize import minimize
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from multiprocessing import Pool
 
@@ -151,7 +150,7 @@ def find_tangency_portfolio(mu, Sigma, allow_short_selling=False, R_f=0.0436):
   """
     Function to find the tangency portfolio
     If short selling is allowed, we use the analytic solution
-    If short selling is not allowed, we scipy's minimize function
+    If short selling is not allowed, a quadratic programming method is used
   """
 
   N = len(mu)
