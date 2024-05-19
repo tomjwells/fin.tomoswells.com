@@ -1,39 +1,12 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
-"use client"
+'use client'
 import React from 'react'
 import type { MPTData } from '../page'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ScatterController
-} from 'chart.js'
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ScatterController } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ScatterController
-)
-import {
-  blue,
-  indigo,
-  jade,
-  amber,
-  cyan, sky,
-  iris, grass, teal,
-
-} from '@radix-ui/colors'
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ScatterController)
+import { blue, indigo, jade, amber, cyan, sky, iris, grass, teal } from '@radix-ui/colors'
 const colors = [blue, indigo, jade, cyan, sky, iris, grass, teal]
 
 const tangentPortfolioColour = '#FFF'
@@ -44,22 +17,19 @@ type TangencyPortfolio = {
   risk: number
 }
 
-export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio }: { mptData: MPTData; riskFreeRate: number; tangencyPortfolio: TangencyPortfolio }) {
+export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio, allowShortSelling }: { mptData: MPTData; riskFreeRate: number; tangencyPortfolio: TangencyPortfolio; allowShortSelling: boolean }) {
   const data = mptData.data
   const slope = (tangencyPortfolio.return - riskFreeRate) / (tangencyPortfolio.risk - 0)
   console.log({ tangency_portfolio: tangencyPortfolio })
 
   const X_MIN = 0
   const X_MAX = 0.7
-  const Y_MIN = Math.min(...data
-    .filter(d => d.risk < X_MAX)
-    .map(d => d.return))
-  const Y_MAX = Math.max(...data.filter(d => d.risk < X_MAX).map(d => d.return))
-
-  const segment = [{ x: 0, y: riskFreeRate }, {
-    x: slope * X_MAX + riskFreeRate > Y_MAX ?
-      (Y_MAX - riskFreeRate) / slope : X_MAX, y: slope * X_MAX + riskFreeRate > Y_MAX ? Y_MAX : slope * X_MAX + riskFreeRate
-  }]
+  // const Y_MIN = Math.min(...data
+  //   .filter(d => d.risk < X_MAX)
+  //   .map(d => d.return))
+  const Y_MIN = -0.2
+  // const Y_MAX = Math.max(...data.filter(d => d.risk < X_MAX).map(d => d.return))
+  const Y_MAX = 0.7
 
   const externalTooltipHandler = (context) => {
     // Tooltip Element
@@ -75,17 +45,17 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     // Set Text
     if (tooltip.body) {
       const titleLines = tooltip.title || []
-      const bodyLines = tooltip.body.map(b => b.lines)
+      const bodyLines = tooltip.body.map((b) => b.lines)
 
       const tableHead = document.createElement('thead')
 
       // @ts-expect-error any
-      titleLines.forEach(title => {
+      titleLines.forEach((title) => {
         const tr = document.createElement('tr')
-        tr.style.borderWidth = "0"
+        tr.style.borderWidth = '0'
 
         const th = document.createElement('th')
-        th.style.borderWidth = "0"
+        th.style.borderWidth = '0'
 
         // Square
         const span = document.createElement('span')
@@ -99,14 +69,12 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         span.style.display = 'inline-block'
         th.appendChild(span)
 
-
         if (tooltip.dataPoints[0]?.raw.weights) {
-          th.appendChild(document.createTextNode("Efficient Frontier"))
+          th.appendChild(document.createTextNode('Efficient Frontier'))
         } else {
           if (tooltip.dataPoints[0]?.raw.status) {
             th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.status))
-          }
-          else if (tooltip.dataPoints[0]?.raw.title) {
+          } else if (tooltip.dataPoints[0]?.raw.title) {
             th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.title))
           } else {
             th.appendChild(document.createTextNode(title))
@@ -128,9 +96,9 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
 
         const tr = document.createElement('tr')
         tr.style.backgroundColor = 'inherit'
-        tr.style.borderWidth = "0"
+        tr.style.borderWidth = '0'
         const td = document.createElement('td')
-        td.style.borderWidth = "0"
+        td.style.borderWidth = '0'
         const text1 = document.createTextNode(`Volatility: ${(tooltip.dataPoints[0]?.raw.x * 100).toFixed(2)}%`)
         td.appendChild(text1)
         tr.appendChild(td)
@@ -141,14 +109,10 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         td3.appendChild(text3)
         tr3.appendChild(td3)
 
-
         tableBody.appendChild(tr2)
         tableBody.appendChild(tr)
         tableBody.appendChild(tr3)
-
-
       })
-
 
       // Remove old children
       const tableRoot = tooltipEl.querySelector('table')
@@ -172,7 +136,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
       const weights = tooltip.dataPoints[0]?.raw.weights
 
       if (weights) {
-
         // Create the table head
         const thead = document.createElement('thead')
         thead.style.width = '400px'
@@ -237,13 +200,13 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px'
   }
 
-  const minRiskDataPoint = data.reduce((min, current) => current.risk < min.risk ? current : min, data[0]!)
+  const minRiskDataPoint = data.reduce((min, current) => (current.risk < min.risk ? current : min), data[0]!)
   const chartData = {
-    labels: data.map(d => d.risk),
+    labels: data.map((d) => d.risk),
     datasets: [
       {
         label: 'Tangency Portfolio',
-        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return, title: "Tangency Portfolio" }], // replace with your actual data
+        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return, title: 'Tangency Portfolio' }], // replace with your actual data
         type: 'scatter', // set type to scatter
         mode: 'markers',
         borderColor: tangentPortfolioColour,
@@ -258,24 +221,27 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         pointRadius: 5,
         pointHitRadius: 10,
         fill: false,
-        showLine: false // no line for this dataset
+        showLine: false, // no line for this dataset
       },
       {
         label: 'Capital Market Line',
-        data: [{ x: 0, y: riskFreeRate, title: "Risk-free Rate" }, {
-          x: slope * X_MAX + riskFreeRate > Y_MAX ? (Y_MAX - riskFreeRate) / slope : X_MAX,
-          y: slope * X_MAX + riskFreeRate > Y_MAX ? Y_MAX : slope * X_MAX + riskFreeRate
-        }],
+        data: [
+          { x: 0, y: riskFreeRate, title: 'Risk-free Rate' },
+          {
+            x: slope * X_MAX + riskFreeRate > Y_MAX ? (Y_MAX - riskFreeRate) / slope : X_MAX,
+            y: slope * X_MAX + riskFreeRate > Y_MAX ? Y_MAX : slope * X_MAX + riskFreeRate,
+          },
+        ],
         borderColor: tangentPortfolioColour,
         backgroundColor: 'transparent',
         fill: false,
         borderDash: [5, 5],
-        borderWidth: 2
+        borderWidth: 2,
       },
 
       {
         label: 'Efficient frontier',
-        data: data.filter(d => d.return >= minRiskDataPoint.return).map(d => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
+        data: data.filter((d) => d.return >= minRiskDataPoint.return).map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
         borderColor: 'white',
         backgroundColor: 'transparent',
         pointBackgroundColor: 'white',
@@ -287,12 +253,12 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         pointRadius: 0.1,
         pointHitRadius: 10,
         borderWidth: 1,
-        fill: false
+        fill: false,
       },
       {
         label: 'Inefficient frontier',
-        // data: data.map(d => d.return),
-        data: data.filter(d => d.return <= minRiskDataPoint.return).map(d => ({ x: d.risk, y: d.return })),
+        hidden: !allowShortSelling,
+        data: data.filter((d) => d.return <= minRiskDataPoint.return).map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
         borderColor: 'white',
         backgroundColor: 'transparent',
         pointBackgroundColor: 'white',
@@ -306,7 +272,6 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         pointHitRadius: 10,
         fill: false,
         borderDash: [5, 5],
-
       },
 
       ...mptData.asset_datapoints.map((d, i) => {
@@ -327,7 +292,7 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           pointHoverBackgroundColor: color,
         }
       }),
-    ]
+    ],
   }
 
   const scatterDataLabelsPlugin = {
@@ -349,12 +314,12 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
             // Set the fillStyle to the color of the current datapoint
             ctx.fillStyle = dataset.pointBackgroundColor
 
-            ctx.fillText(chart.config.data.datasets[x].data[i].status, meta.data[i].x - (textWidth / 2), meta.data[i].y + 25)
+            ctx.fillText(chart.config.data.datasets[x].data[i].status, meta.data[i].x - textWidth / 2, meta.data[i].y + 25)
           }
         }
       }
       ctx.restore()
-    }
+    },
   }
 
   const options = {
@@ -362,7 +327,8 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
     backgroundColor: 'transparent',
     height: 500,
     scales: {
-      x: { // 'x' for x-axis
+      x: {
+        // 'x' for x-axis
         border: { dash: [4, 4] }, // for the grid lines
         title: {
           display: true,
@@ -378,8 +344,8 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           tickBorderDash: [4, 4], // also for the tick, if long enough
           tickLength: 0, // just to see the dotted line
           tickWidth: 1,
-          drawTicks: true, // true is default 
-          drawOnChartArea: true // true is default 
+          drawTicks: true, // true is default
+          drawOnChartArea: true, // true is default
         },
         type: 'linear',
         min: X_MIN, // set minimum value
@@ -394,9 +360,10 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
           font: {
             size: 14,
           },
-        }
+        },
       },
-      y: { // 'y' for y-axis
+      y: {
+        // 'y' for y-axis
         type: 'linear',
         min: Y_MIN, // set minimum value
         max: Y_MAX, // set maximum value
@@ -425,63 +392,54 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio 
         },
         border: { dash: [4, 4] }, // for the grid lines
         grid: {
-
           color: function (context: { tick: { value: number } }) {
             return context.tick.value === Y_MIN || context.tick.value === Y_MAX ? 'transparent' : 'rgba(128, 128, 128, 0.5)'
           },
           tickBorderDash: [4, 4], // also for the tick, if long enough
           tickLength: 10, // just to see the dotted line
           tickWidth: 1,
-          drawTicks: true, // true is default 
-          drawOnChartArea: true // true is default 
+          drawTicks: true, // true is default
+          drawOnChartArea: true, // true is default
         },
-      }
+      },
     },
     plugins: {
       legend: {
-        display: false
+        display: false,
       },
       tooltip: {
         enabled: false,
         position: 'nearest',
-        external: externalTooltipHandler
-      }
+        external: externalTooltipHandler,
+      },
     },
     tooltips: {
       enabled: true,
       callbacks: {
         label: function (tooltipItem: { yLabel: string }) {
           return tooltipItem.yLabel + '%'
-        }
-      }
+        },
+      },
     },
     elements: {
       line: {
-        tension: 0
-      }
+        tension: 0,
+      },
     },
-    maintainAspectRatio: false
+    maintainAspectRatio: false,
   }
-
-
 
   return (
     // @ts-expect-error ChartJS
-    <Line data={chartData} options={options}
-      plugins={[
-        scatterDataLabelsPlugin
-      ]} />
+    <Line data={chartData} options={options} plugins={[scatterDataLabelsPlugin]} />
   )
-
-
 }
-
 
 function stringToHash(str: string) {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash |= 0 // Convert to 32bit integer
   }
   return hash
@@ -501,7 +459,7 @@ export function getRandomColor(str: string) {
   const keys = Object.keys(colorClass)
 
   // Filter the keys to only include those with integer values greater than 4 and less than 10
-  const filteredKeys = keys.filter(key => {
+  const filteredKeys = keys.filter((key) => {
     const intValue = parseInt(key.replace(/\D/g, ''))
     return intValue > 8 && intValue < 11
   })
@@ -515,7 +473,6 @@ export function getRandomColor(str: string) {
 
   return color
 }
-
 
 // Tooltip
 const getOrCreateTooltip = (chart) => {
@@ -544,4 +501,3 @@ const getOrCreateTooltip = (chart) => {
 
   return tooltipEl
 }
-

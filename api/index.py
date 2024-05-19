@@ -1,44 +1,52 @@
-# add the parent directory to the PYTHONPATH programmatically
-import os
-import sys
-sys.path.append('..')
-import gzip
-import json
-import time
-import random
-from typing import List
-from flask import Flask, request
-from flask_caching import Cache
-
-import pandas as pd
-import numpy as np  
-from flask import jsonify, make_response
-import yfinance as yf
-
-
-from modules.markowitz.main import main
+import numpy as np
+import concurrent.futures
+from typing import Literal
+from datetime import datetime
+from modules.derivatives.monte_carlo import monte_carlo
+from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.binomial_model import EUPrice, USPrice
+from modules.markowitz.main import main
+import yfinance as yf
+from flask import jsonify, make_response
+import pandas as pd
+from flask_caching import Cache
+from flask import Flask, request
+from typing import List
+import random
+import time
+import json
+import gzip
+import os
+
 
 app = Flask(__name__)
-app.config["CACHE_REDIS_URL"] = os.environ.get("KV_URL").replace("redis://", "rediss://")
+app.config["CACHE_REDIS_URL"] = os.environ.get(
+    "KV_URL").replace("redis://", "rediss://")
 cache = Cache(app, config={'CACHE_TYPE': 'RedisCache'})
 timeout = 7*24*60*60
+
 
 @app.route("/")
 def hello_main():
   return "<p>Hello, World!</p>"
 
-######### Markowitz
+# Markowitz
+
 
 @app.route("/api/markowitz/main")
 def markowitz_main():
-  assets: List[str]=request.args.getlist('assets')
+  assets: List[str] = request.args.getlist('assets')
   startYear: int = int(request.args.get('startYear'))
   endYear: int = int(request.args.get('endYear'))
+  r: float = float(request.args.get('r'))
+  allowShortSelling: bool = request.args.get('allowShortSelling') == 'true'
+  print(f"{allowShortSelling=}")
   assert isinstance(assets, list), "assets should be a list"
   assert isinstance(startYear, int), "startYear should be a int"
   assert isinstance(endYear, int), "endYear should be a int"
-  result = main(assets, startYear, endYear)
+  assert isinstance(allowShortSelling,
+                    bool), "allowShortSelling should be a bool"
+  result = main(assets, startYear, endYear, allowShortSelling, R_f=r)
   # Compress the response to enable larger payload
   content = gzip.compress(json.dumps(result).encode('utf8'), 5)
   response = make_response(content)
@@ -46,21 +54,27 @@ def markowitz_main():
   response.headers['Content-Encoding'] = 'gzip'
   return response
 
+
 @app.route("/api/markowitz/stocks")
 @cache.memoize(timeout=timeout)
 def markowitz_stocks():
-  tickers = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
+  tickers = pd.read_html(
+      'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
   tickers_list: List[str] = tickers['Symbol'].to_list()
-  assert isinstance(tickers_list, list) and all(isinstance(i, str) for i in tickers_list), "tickers_list should be a list of strings"
+  assert isinstance(tickers_list, list) and all(isinstance(i, str)
+                                                for i in tickers_list), "tickers_list should be a list of strings"
   return [{"value": ticker, "label": ticker} for ticker in tickers_list]
+
 
 @app.route("/api/utils/risk-free-rate")
 @cache.memoize(timeout=timeout)
 def get_risk_free():
   # Get the risk-free rate
-  risk_free_rate: float = yf.download("^IRX",progress=False,)['Adj Close'].mean()/100 
+  risk_free_rate: float = yf.download("^IRX", progress=False,)[
+      'Adj Close'].mean()/100
   assert isinstance(risk_free_rate, float), "risk_free_rate should be a float"
   return jsonify(risk_free_rate)
+
 
 @app.route("/api/stock/<ticker>")
 def get_stock_price(ticker: str):
@@ -75,25 +89,24 @@ def get_stock_price(ticker: str):
   return jsonify({'ticker': ticker, 'price': price})
 
 
-######### Derivatives
+# Derivatives
 
-from modules.derivatives.black_scholes import black_scholes_option
-from modules.derivatives.monte_carlo import monte_carlo
-from modules.derivatives.binomial_model import EUPrice, USPrice
-from datetime import datetime
-from typing import Literal
 
 # Route for option-price
+
 @app.route("/api/derivatives/option-price")
 def get_option_price():
   option_type = request.args.get('optionType')
-  assert option_type in ['european', 'american'], "option_type should be either 'european' or 'american'"
+  assert option_type in [
+      'european', 'american'], "option_type should be either 'european' or 'american'"
   method = request.args.get('method')
-  assert method in ['binomial', 'black-scholes', 'monte-carlo'], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
-  instrument: Literal['call','put'] = request.args.get('instrument')
-  assert instrument in ['call', 'put'], "instrument should be either 'call' or 'put'"
+  assert method in ['binomial', 'black-scholes',
+                    'monte-carlo'], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
+  instrument: Literal['call', 'put'] = request.args.get('instrument')
+  assert instrument in [
+      'call', 'put'], "instrument should be either 'call' or 'put'"
 
-  t: datetime =  datetime.now()
+  t: datetime = datetime.now()
   T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')
   if t > T:
     return jsonify({"error": f"t: {t} should be less than T: {T}"}), 400
@@ -105,7 +118,8 @@ def get_option_price():
   r: float = get_risk_free_rate()
   S_0, sigma = get_stock_data(ticker)
 
-  print("S_0: ",S_0, "sigma: ",sigma, "r: ",r, "K: ",K, "tau: ",tau, "method: ",method, "option_type: ",option_type, "instrument: ",instrument)
+  print("S_0: ", S_0, "sigma: ", sigma, "r: ", r, "K: ", K, "tau: ", tau,
+        "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
 
   if method == 'binomial':
     num_steps = int(1e3)
@@ -120,33 +134,33 @@ def get_option_price():
       return jsonify(bs.value(instrument))
     if option_type == 'american':
       return jsonify({"error": "American options are not supported"})
-    
+
   if method == 'monte-carlo':
     num_trials = int(1e5)
     num_timesteps = 100
     if option_type == 'european':
-      return jsonify(monte_carlo(instrument, S_0, K, tau,r, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0,int(1e6))))
+      return jsonify(monte_carlo(instrument, S_0, K, tau, r, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported yet"})
 
 
-import concurrent.futures
-
 def download_data(ticker: str):
-    return yf.download(ticker, progress=False)['Adj Close']
+  return yf.download(ticker, progress=False)['Adj Close']
 
 # @cache.memoize(timeout=timeout)
+
+
 def get_stock_data(ticker: str) -> tuple[float, float]:
   # Get the stock data
-  print("ticker: ",ticker)
+  print("ticker: ", ticker)
   stock_data: pd.Series | None = None
-  for _ in range(10): 
+  for _ in range(10):
     with concurrent.futures.ThreadPoolExecutor() as executor:
       future = executor.submit(download_data, ticker)
       try:
         stock_data = future.result(timeout=1)  # Timeout after 1 second
         if stock_data is not None:
-            break
+          break
       except concurrent.futures.TimeoutError:
         print("yfinance request timed out. Retrying...")
       except Exception as e:
@@ -155,7 +169,8 @@ def get_stock_data(ticker: str) -> tuple[float, float]:
 
   if stock_data is None:
     print("Failed to download stock data after 10 attempts.")
-  assert isinstance(stock_data, pd.Series), "stock_data should be a pandas Series"
+  assert isinstance(
+      stock_data, pd.Series), "stock_data should be a pandas Series"
   returns = stock_data.pct_change()
   sigma = returns.std()
   return stock_data.iloc[-1], np.sqrt(365) * sigma
@@ -164,6 +179,7 @@ def get_stock_data(ticker: str) -> tuple[float, float]:
 @cache.memoize(timeout=timeout)
 def get_risk_free_rate() -> float:
   # Get the risk-free rate
-  risk_free_rate: float = yf.download("^IRX",progress=False,)['Adj Close'].mean()/100
+  risk_free_rate: float = yf.download("^IRX", progress=False,)[
+      'Adj Close'].mean()/100
   assert isinstance(risk_free_rate, float), "risk_free_rate should be a float"
   return risk_free_rate
