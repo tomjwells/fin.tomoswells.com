@@ -47,7 +47,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
       <Flex direction='column' gap='2' my='4'>
         <Heading size='3'>Choose a collection of assets to consider for a candidate portfolio.</Heading>
         <Text size='1' color='gray'>
-          Hint: Start typing to find a particular ticker.
+          Hint: Start typing to find a particular ticker. Use backspace to remove tickers quickly.
         </Text>
 
         <FancyMultiSelect assets={await fetchAssets()} pageParams={pageParams} />
