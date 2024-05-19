@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 
-
 @theme {
   --color-background: #171717;
   --color-foreground: hsl(0 0% 98%);
@@ -12,7 +11,7 @@
   --color-primary-foreground: hsl(240 5.9% 10%);
   --color-secondary: hsl(240 3.7% 15.9%);
   --color-secondary-foreground: hsl(0 0% 98%);
-  --color-muted: #1C1C1C;
+  --color-muted: #1c1c1c;
   --color-muted-foreground: hsl(240 5% 64.9%);
   --color-accent: hsl(240 3.7% 15.9%);
   --color-accent-foreground: hsl(0 0% 98%);
@@ -41,7 +40,7 @@
     }
 
     to {
-      height: "0";
+      height: '0';
     }
   }
 }
@@ -55,5 +54,6 @@ button {
 }
 
 .radix-themes {
+  --default-font-family: var(--font-inter);
   --base-card-surface-box-shadow: 0 0 0 1px rgb(41, 41, 41);
 }
