@@ -8,6 +8,7 @@ import pandas as pd
 import yfinance as yf
 import numpy.typing as npt
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from functools import partial
 
 
 import redis
@@ -135,10 +136,12 @@ def efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace):
   A = matrix(np.vstack([np.array(mu), np.ones(N)]))
 
   # Parallelize the quadratic optimization step over each of the R_p linspace
+  calculate_portfolio_partial = partial(
+      calculate_portfolio, S=S, q=q, G=G, h=h, A=A)
+  # Parallelize the quadratic optimization step over each of the R_p linspace
   with ThreadPoolExecutor() as executor:
-    portfolios = list(executor.map(calculate_portfolio, [
-        (R_p, S, q, G, h, A) for R_p in R_p_linspace]))
-
+    portfolios = list(executor.map(
+        calculate_portfolio_partial, R_p_linspace))
   # CALCULATE RISKS AND RETURNS FOR FRONTIER
   weights = np.array(portfolios).squeeze()
   risks = np.sqrt(np.einsum('ij,ij->i', weights, np.dot(weights, S)))
