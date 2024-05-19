@@ -55,5 +55,11 @@ button {
 
 .radix-themes {
   --default-font-family: var(--font-inter);
+  --heading-font-size-adjust: 1.1;
+  --heading-line-height-4: 30px;
+  --font-size-1: 14px;
+  --line-height-1: 22px;
+  --font-size-2: 15px;
+  --line-height-2: 30px;
   --base-card-surface-box-shadow: 0 0 0 1px rgb(41, 41, 41);
 }
