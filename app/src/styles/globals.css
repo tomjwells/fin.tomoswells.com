@@ -57,6 +57,7 @@ button {
   --default-font-family: var(--font-inter);
   --heading-font-size-adjust: 1.1;
   --heading-line-height-4: 30px;
+  --heading-letter-spacing: 0.005em;
   --font-size-1: 14px;
   --line-height-1: 22px;
   --font-size-2: 15px;
