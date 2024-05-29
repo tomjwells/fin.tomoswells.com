@@ -54,26 +54,24 @@ function Nav() {
   return (
     <header className={`flex w-full flex-col-reverse sm:flex-row justify-center`}>
       <div className='w-full container mx-0 flex sm:h-20 items-center justify-center sm:justify-between py-6 sm:mx-16 md:mx-24 md:max-w-2xl lg:mx-56 lg:max-w-5xl'>
-        <Suspense>
-          <Tabs defaultValue='/'>
-            <TabsList className='flex-col sm:flex-row h-auto sm:h-9 gap-1.5 sm:gap-0'>
-              <TabsTrigger value='/' className='w-full sm:w-auto'>
-                <HomeIcon />
+        <Tabs defaultValue='/'>
+          <TabsList className='flex-col sm:flex-row h-auto sm:h-9 gap-1.5 sm:gap-0'>
+            <TabsTrigger value='/' className='w-full sm:w-auto'>
+              <HomeIcon />
+            </TabsTrigger>
+            <TabsTrigger value='/derivatives' className='w-full sm:w-auto'>
+              Options Pricing
+            </TabsTrigger>
+            <TabsTrigger value='/markowitz' className='w-full sm:w-auto'>
+              Modern Portfolio Theory
+            </TabsTrigger>
+            {env.NODE_ENV === 'development' && (
+              <TabsTrigger value='/timeseries' className='w-full sm:w-auto'>
+                Timeseries Forecasting
               </TabsTrigger>
-              <TabsTrigger value='/derivatives' className='w-full sm:w-auto'>
-                Options Pricing
-              </TabsTrigger>
-              <TabsTrigger value='/markowitz' className='w-full sm:w-auto'>
-                Modern Portfolio Theory
-              </TabsTrigger>
-              {env.NODE_ENV === 'development' && (
-                <TabsTrigger value='/timeseries' className='w-full sm:w-auto'>
-                  Timeseries Forecasting
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
-        </Suspense>
+            )}
+          </TabsList>
+        </Tabs>
       </div>
       <div className='flex justify-center sm:justify-end sm:mr-20'>
         <a href='https://github.com/tomjwells/finance' target='_blank' rel='noopener noreferrer'>

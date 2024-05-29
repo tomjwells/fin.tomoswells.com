@@ -26,20 +26,18 @@ const pageParamsSchema = z.object({
 export type PageParams = z.infer<typeof pageParamsSchema>
 
 export default async function MPTPage({ params, searchParams }: { params: { slug: string }; searchParams?: Record<string, string | string[] | undefined> }) {
-  let pageParams = {} as PageParams
-  try {
-    pageParams = pageParamsSchema.parse(searchParams)
-  } catch (e) {
+  const parsed = pageParamsSchema.safeParse(searchParams)
+  if (!parsed.success) {
     const params = new URLSearchParams()
-    const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'AMD']
+    const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BKR']
     defaultAssets.forEach((asset) => params.append('assets', asset))
     params.append('r', `${await fetchRiskFreeRate()}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
-    params.append('allowShortSelling', `${false}`)
-    console.log('redirecting', `?${params.toString()}`)
+    params.append('allowShortSelling', `${true}`)
     redirect(`?${params.toString()}`)
   }
+  const pageParams = parsed.data
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-5'>
@@ -63,7 +61,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
 
         <div className='my-4'>
           <Heading size='3'>Risk free rate</Heading>
-          <Text size='2'>The default value for risk free rate is chosen to be current value of the three-month U.S. Treasury bill, but it can be changed to any other rate.</Text>
+          <Text size='2'>The risk free rate is set by default to the rate of the three-month U.S. Treasury bill, but it can be changed to any other rate.</Text>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
           </Suspense>
@@ -119,6 +117,7 @@ const MPTSchema = z.object({
   }),
 })
 export type MPTData = z.infer<typeof MPTSchema>
+
 async function fetchMPT(pageParams: PageParams) {
   const queryParams = new URLSearchParams()
   pageParams.assets.forEach((asset) => queryParams.append('assets', asset))
@@ -130,7 +129,6 @@ async function fetchMPT(pageParams: PageParams) {
   console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
   const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, {
     cache: env.NODE_ENV == 'development' ? 'no-cache' : 'force-cache',
-    // cache: 'force-cache'
   })
   return MPTSchema.parse(await response.json())
 }
