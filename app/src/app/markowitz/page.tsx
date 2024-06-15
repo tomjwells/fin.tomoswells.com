@@ -82,30 +82,30 @@ export default async function MPTPage({
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-5'>
-      <Heading size='6'>Modern Portfolio Theory</Heading>
-      <Text size='1' color='gray'>
-        The derivation for the formulae used for this implementation of
-        Markowtiz’s Modern Portfolio Theory (MPT) is available{' '}
-        <RadixLink asChild>
-          <Link
-            target='_blank'
-            href={`https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf`}
-          >
-            here
-          </Link>
-        </RadixLink>
-        . The Python implementation can be found{' '}
-        <RadixLink asChild>
-          <Link
-            target='_blank'
-            href={`https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py`}
-          >
-            here
-          </Link>
-        </RadixLink>
-        .
-      </Text>
       <Flex direction='column' gap='2' my='4'>
+        <Heading size='6'>Modern Portfolio Theory</Heading>
+        <Text size='1' color='gray'>
+          The derivation for the formulae used for this implementation of
+          Markowtiz’s Modern Portfolio Theory (MPT) is available{' '}
+          <RadixLink asChild>
+            <Link
+              target='_blank'
+              href={`https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf`}
+            >
+              here
+            </Link>
+          </RadixLink>
+          . The Python implementation can be found{' '}
+          <RadixLink asChild>
+            <Link
+              target='_blank'
+              href={`https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py`}
+            >
+              here
+            </Link>
+          </RadixLink>
+          .
+        </Text>
         <Heading size='3'>
           Choose a collection of assets to consider for a candidate portfolio.
         </Heading>
