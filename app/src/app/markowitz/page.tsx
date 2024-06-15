@@ -82,10 +82,10 @@ export default async function MPTPage({
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-5'>
-      <Flex direction='column' gap='2' my='4'>
+      <Flex direction='column' gap='2' mb='4'>
         <Heading size='6'>Modern Portfolio Theory</Heading>
         <Text size='1' color='gray'>
-          The derivation for the formulae used for this implementation of
+          A derivation for the formulae used in this implementation of
           Markowtiz’s Modern Portfolio Theory (MPT) is available{' '}
           <RadixLink asChild>
             <Link
@@ -95,7 +95,7 @@ export default async function MPTPage({
               here
             </Link>
           </RadixLink>
-          . The Python implementation can be found{' '}
+          . The Python code for the implementation can be found{' '}
           <RadixLink asChild>
             <Link
               target='_blank'
@@ -106,12 +106,15 @@ export default async function MPTPage({
           </RadixLink>
           .
         </Text>
+      </Flex>
+      <Flex direction='column' gap='2' my='4'>
         <Heading size='3'>
           Choose a collection of assets to consider for a candidate portfolio.
         </Heading>
         <Text size='1' color='gray'>
           Hint: Start typing to find a particular ticker. Use backspace to
-          remove tickers quickly.
+          remove tickers quickly. The list of selectable tickers comes from the
+          stocks in the S&P 500.
         </Text>
 
         <FancyMultiSelect assets={assets} pageParams={pageParams} />
