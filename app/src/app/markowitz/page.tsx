@@ -1,14 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import {
-  Box,
-  Card,
-  Flex,
-  Heading,
-  Text,
-  Link as RadixLink,
-  Spinner,
-} from '@radix-ui/themes'
+import { Box, Card, Flex, Heading, Text, Link, Spinner } from '@radix-ui/themes'
 import { FancyMultiSelect } from './_components/fancy-multi-select'
 import type { Asset } from './_components/fancy-multi-select'
 import { env } from '~/env'
@@ -17,7 +9,7 @@ import z from 'zod'
 import TangencyPortfolioPieChart from './_components/TangencyPortfolioPieChart'
 import ChartJSChart from './_components/ChartJSChart'
 import AdvancedControls from './_components/AdvancedControls'
-import Link from 'next/link'
+import NextLink from 'next/link'
 import { Vector, Matrix } from 'ts-matrix'
 import AllowShortSelling from './_components/AllowShortSellingSwitch'
 
@@ -84,26 +76,26 @@ export default async function MPTPage({
     <Card className='w-full before:![background-color:transparent] !p-5'>
       <Flex direction='column' gap='2' mb='4'>
         <Heading size='6'>Modern Portfolio Theory</Heading>
-        <Text size='1' color='gray'>
-          A derivation for the formulae used in this implementation of
+        <Text size='1'>
+          A derivation of the formulae used in this implementation of
           Markowtiz’s Modern Portfolio Theory (MPT) is available{' '}
-          <RadixLink asChild>
-            <Link
+          <Link asChild>
+            <NextLink
               target='_blank'
               href={`https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf`}
             >
               here
-            </Link>
-          </RadixLink>
+            </NextLink>
+          </Link>
           . The Python code for the implementation can be found{' '}
-          <RadixLink asChild>
-            <Link
+          <Link asChild>
+            <NextLink
               target='_blank'
               href={`https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py`}
             >
               here
-            </Link>
-          </RadixLink>
+            </NextLink>
+          </Link>
           .
         </Text>
       </Flex>
@@ -137,8 +129,8 @@ export default async function MPTPage({
         <div className='my-4'>
           <Heading size='3'>Risk free rate</Heading>
           <Text size='2'>
-            The risk free rate is set by default to the rate of the three-month
-            U.S. Treasury bill, but it can be changed to any other rate.
+            The risk free rate is set by default to the yield of the three-month
+            U.S. Treasury bill, but it can be changed to any other value.
           </Text>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
@@ -374,8 +366,8 @@ async function ResultsSection({
           Something went wrong on the server. The server can time out (after
           10s) if a large number of equities are passed as arguments. Please
           either{' '}
-          <RadixLink asChild>
-            <Link
+          <Link asChild>
+            <NextLink
               href={
                 `?` +
                 new URLSearchParams(
@@ -384,8 +376,8 @@ async function ResultsSection({
               }
             >
               try again
-            </Link>
-          </RadixLink>
+            </NextLink>
+          </Link>
           , or reduce the number of equities.
         </Text>
         {env.NODE_ENV === 'development' && (
