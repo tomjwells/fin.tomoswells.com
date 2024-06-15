@@ -19,8 +19,6 @@ r = redis.Redis.from_url(url=os.getenv(
     "REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
-
-
 def cache(func):
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
@@ -58,8 +56,7 @@ def download_data(ticker: str) -> pd.Series:
   """
     Downloads the adjusted close prices for a given ticker and calculates the daily returns
   """
-  stock_data = yf.download(ticker.replace(
-      '.', '-'), progress=False)['Adj Close']
+  stock_data = yf.download(ticker.replace('.', '-'), progress=False)['Adj Close']
   daily_returns = stock_data.pct_change().dropna()
   return daily_returns
 
@@ -76,9 +73,7 @@ def estimate_rets(symbols: List[str], start_date: str, end_date: str) -> tuple[p
 
   # Create a DataFrame from the results
   stock_returns = pd.concat(results, axis=1, keys=symbols)
-  filtered_stock_returns = stock_returns.loc[start_date:end_date]
-
-  return filtered_stock_returns
+  return stock_returns.loc[start_date:end_date]
 
 
 def efficient_frontier(mu: npt.NDArray[np.floating[Any]], Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[List[float], List[float]]:
@@ -88,16 +83,15 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]], Sigma: np.ndarray[Any,
   c = mu.T @ inv_Sigma @ ones
   f = ones.T @ inv_Sigma @ ones
   d = a * f - c * c
-  one_over_d = 1.0 / d
+  one_over_d = d ** -1
   var_p = one_over_d * (f * (R_p_linspace ** 2) - 2 * c * R_p_linspace + a)
 
-  # Calculate the portfolio weights along the efficient frontier (vectorized)
+  # Vectorized calculation of the portfolio weights along the efficient frontier
   lambda_1 = + one_over_d * (f * R_p_linspace - c)
   lambda_2 = - one_over_d * (c * R_p_linspace - a)
-  weights = lambda_1[:, None] * \
-      (inv_Sigma @ mu) + lambda_2[:, None] * (inv_Sigma @ ones)
+  weights = lambda_1[:, None] * (inv_Sigma @ mu) + lambda_2[:, None] * (inv_Sigma @ ones)
 
-  return var_p.tolist(), weights.tolist()
+  return weights.tolist(), np.sqrt(var_p).tolist()
 
 
 def port_sharpe(rets, cov, weights):
@@ -114,9 +108,7 @@ def port_return(mu, weights):
 
 
 def calculate_portfolio(R_p, S, q, G, h, A):
-  b = matrix([R_p, 1.0])
-  portfolio = solvers.qp(S, q, G, h, A, b)['x']
-  return portfolio
+  return solvers.qp(S, q, G, h, A, matrix([R_p, 1.0]))['x']
 
 
 def efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace):
@@ -136,12 +128,10 @@ def efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace):
   A = matrix(np.vstack([np.array(mu), np.ones(N)]))
 
   # Parallelize the quadratic optimization step over each of the R_p linspace
-  calculate_portfolio_partial = partial(
-      calculate_portfolio, S=S, q=q, G=G, h=h, A=A)
+  calculate_portfolio_partial = partial(calculate_portfolio, S=S, q=q, G=G, h=h, A=A)
   # Parallelize the quadratic optimization step over each of the R_p linspace
   with ThreadPoolExecutor() as executor:
-    portfolios = list(executor.map(
-        calculate_portfolio_partial, R_p_linspace))
+    portfolios = list(executor.map(calculate_portfolio_partial, R_p_linspace))
   # CALCULATE RISKS AND RETURNS FOR FRONTIER
   weights = np.array(portfolios).squeeze()
   risks = np.sqrt(np.einsum('ij,ij->i', weights, np.dot(weights, S)))
@@ -152,7 +142,7 @@ def efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace):
 def find_tangency_portfolio(mu, Sigma, allow_short_selling=False, R_f=0.0436):
   """
     Function to find the tangency portfolio
-    If short selling is allowed, we use the analytic solution
+    If short selling is allowed, the analytic solution is used
     If short selling is not allowed, a quadratic programming method is used
   """
 
@@ -163,8 +153,7 @@ def find_tangency_portfolio(mu, Sigma, allow_short_selling=False, R_f=0.0436):
     # Analytic solution
     Sigma_inv = np.linalg.inv(Sigma)
     ones = np.ones(N)
-    tangency_weights = Sigma_inv @ (mu - R_f * ones) / \
-        (ones.T @ Sigma_inv @ (mu - R_f * ones))
+    tangency_weights = Sigma_inv @ (mu - R_f * ones) / (ones.T @ Sigma_inv @ (mu - R_f * ones))
     # tangency_weights = tangency_weights.tolist()
   else:
     # See https://bookdown.org/compfinezbook/introcompfinr/Quadradic-programming.html#no-short-sales-tangency-portfolio for the mathematical formulation
@@ -172,7 +161,6 @@ def find_tangency_portfolio(mu, Sigma, allow_short_selling=False, R_f=0.0436):
     S = matrix(2*Sigma)
 
     # Linear term (negative expected excess returns)
-    # q = matrix(-mu + R_f)
     q = matrix(np.zeros((N, 1)))
 
     # Equality constraint
@@ -190,8 +178,7 @@ def find_tangency_portfolio(mu, Sigma, allow_short_selling=False, R_f=0.0436):
 
   # Calculate the portfolio return and risk
   tangency_return = np.dot(mu, tangency_weights)
-  tangency_risk = np.sqrt(
-      np.dot(tangency_weights.T, np.dot(Sigma, tangency_weights)))
+  tangency_risk = np.sqrt(np.dot(tangency_weights.T, np.dot(Sigma, tangency_weights)))
 
   return {
       "return": tangency_return,
@@ -217,14 +204,12 @@ def main(symbols: List[str], startYear: int, endYear: int, allowShortSelling: bo
     max = 5.0
     min = -5.0
     R_p_linspace = np.linspace(min, max, num=1000)
-    var_p, weights = efficient_frontier(mu, Sigma, R_p_linspace)
-    sigma_p = np.sqrt(var_p)
+    weights, sigma_p = efficient_frontier(mu, Sigma, R_p_linspace)
   else:
     max = np.max(mu)
     min = np.min(mu)
     R_p_linspace = np.linspace(min, max, num=300)
-    weights, sigma_p = efficient_frontier_numerical(
-        mu, Sigma, symbols, R_p_linspace)
+    weights, sigma_p = efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace)
 
   tangency_portfolio = find_tangency_portfolio(
       mu, Sigma, allow_short_selling=allowShortSelling, R_f=R_f)
