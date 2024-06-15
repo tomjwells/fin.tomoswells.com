@@ -78,7 +78,7 @@ export default async function MPTPage({
         <Heading size='6'>Modern Portfolio Theory</Heading>
         <Text size='1'>
           A derivation of the formulae used in this implementation of
-          Markowtiz’s Modern Portfolio Theory (MPT) is available{' '}
+          Markowtiz’s Modern Portfolio Theory (MPT) can be found{' '}
           <Link asChild>
             <NextLink
               target='_blank'
@@ -87,7 +87,7 @@ export default async function MPTPage({
               here
             </NextLink>
           </Link>
-          . The Python code for the implementation can be found{' '}
+          . The Python code for the implementation is available{' '}
           <Link asChild>
             <NextLink
               target='_blank'
