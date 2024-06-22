@@ -8,7 +8,6 @@ from modules.markowitz.main import main
 import yfinance as yf
 from flask import jsonify, make_response
 import pandas as pd
-from flask_caching import Cache
 from flask import Flask, request
 from typing import List
 import random
