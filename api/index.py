@@ -68,7 +68,7 @@ def markowitz_main():
       '%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
   columns_str = ', '.join(
-      [f'"{asset}"' for asset in assets if asset.isidentifier()])
+      [f"'{asset}'" for asset in assets if asset.isidentifier()])
   rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", engine, params=(
       start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
   result = main(assets, rets, allowShortSelling, R_f=r)
@@ -84,6 +84,7 @@ def markowitz_main():
 @app.route("/api/seed_db")
 def seed_db():
   if app.debug == True:
+    import yfinance as yf
     risk_free_rate = yf.download("^IRX", progress=False,)[
         'Adj Close'].tail(1)/100
     risk_free_rate.to_sql(name='risk_free_rate',
