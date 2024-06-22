@@ -44,7 +44,7 @@ def cache(func):
 
 app = Flask(__name__)
 
-engine = create_engine(f"sqlite+{os.getenv("TURSO_DATABASE_URL")}/?authToken={os.getenv("TURSO_AUTH_TOKEN")}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
+engine = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
 
