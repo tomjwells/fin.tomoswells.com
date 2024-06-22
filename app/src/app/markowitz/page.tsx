@@ -66,7 +66,9 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <Text size='1' color='gray'>
           Hint: Start typing to find a particular ticker. Use backspace to remove tickers quickly. The list of selectable tickers comes from the stocks in the S&P 500.
         </Text>
-        <FancyMultiSelect assets={await fetchAssets} pageParams={pageParams} />
+        <Suspense>
+          <FancyMultiSelect assets={await fetchAssets} pageParams={pageParams} />
+        </Suspense>
         <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is indicated by the solid white line.</Text>
 
         <div className='flex flex-col my-4'>
@@ -97,7 +99,9 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
           <Heading size='5' mt='4'>
             Results
           </Heading>
-          <ResultsSection pageParams={pageParams} searchParams={searchParams} />
+          <Suspense>
+            <ResultsSection pageParams={pageParams} searchParams={searchParams} />
+          </Suspense>
         </Suspense>
       </Flex>
     </Card>
@@ -141,9 +145,7 @@ async function fetchMPT(pageParams: PageParams) {
   queryParams.append('allowShortSelling', pageParams.allowShortSelling.toString())
 
   console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
-  const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, {
-    cache: env.NODE_ENV == 'development' ? 'no-cache' : 'force-cache',
-  })
+  const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { cache: 'no-cache' })
   return MPTSchema.parse(await response.json())
 }
 
