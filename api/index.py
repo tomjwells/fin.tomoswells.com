@@ -19,28 +19,28 @@ import libsql_experimental as libsql
 # import libsql_client as libsql
 
 
-import redis
-import functools
-import pickle
+# import redis
+# import functools
+# import pickle
 
-r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
+# r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
 
 
-def cache(func):
-  @functools.wraps(func)
-  def wrapper(*args, **kwargs):
-    key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-    if (val := r.get(key)) is not None:
-      print("Cache hit!")
-      return pickle.loads(val)
-    else:
-      print("Cache miss!")
-      val = func(*args, **kwargs)
-      r.set(key, pickle.dumps(val))
-      return val
-  return wrapper
+# def cache(func):
+#   @functools.wraps(func)
+#   def wrapper(*args, **kwargs):
+#     key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+#     if (val := r.get(key)) is not None:
+#       print("Cache hit!")
+#       return pickle.loads(val)
+#     else:
+#       print("Cache miss!")
+#       val = func(*args, **kwargs)
+#       r.set(key, pickle.dumps(val))
+#       return val
+#   return wrapper
 
 
 app = Flask(__name__)
@@ -107,7 +107,7 @@ def seed_db():
     return jsonify({"error": "Cannot seed database in production"}), 400
 
 
-@cache
+# @cache
 def download_symbols(symbols: List[str]) -> pd.DataFrame:
   """
     Downloads the adjusted close prices for the tickers in parallel
@@ -121,7 +121,7 @@ def download_symbols(symbols: List[str]) -> pd.DataFrame:
   return pd.concat(list(results), axis=1, keys=symbols)
 
 
-@cache
+# @cache
 def get_returns(ticker: str) -> pd.Series:
   # yfinance.download frequently errors, this wrapper makes downloading reliable
   for _ in range(int(1e5)):
@@ -138,7 +138,7 @@ def get_returns(ticker: str) -> pd.Series:
       time.sleep(2)
 
 
-@cache
+# @cache
 def download_data(ticker: str) -> pd.Series:
   """
     Downloads the adjusted close prices for a given ticker and calculates the daily returns
