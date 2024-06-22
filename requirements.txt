@@ -4,9 +4,9 @@ python-dotenv==1.0.1
 # numpy
 pandas==2.2.2
 # yfinance==0.2.37 # Disable in prod, to reduce function size, since it is not used
-sqlalchemy-libsql==0.1.0
-# libsql-experimental==0.0.34
-# modin[dask]==0.30.1
+# sqlalchemy-libsql==0.1.0
+libsql-experimental==0.0.34
+# libsql-client==0.3.1
 cvxopt==1.3.2
 
 # Command to show package sizes: pip list   | tail -n +3   | awk '{print $1}'   | xargs pip show   | grep -E 'Location:|Name:'   | cut -d ' ' -f 2   | paste -d ' ' - -   | awk '{print $2 "/" tolower($1)}'   | xargs du -sh 2> /dev/null   | sort -hr

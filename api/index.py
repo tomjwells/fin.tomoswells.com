@@ -5,10 +5,8 @@ from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.binomial_model import EUPrice, USPrice
 from modules.markowitz.main import main
-from flask import jsonify, make_response
+from flask import Flask, request, jsonify, make_response
 import pandas as pd
-# import modin.pandas as pd
-from flask import Flask, request
 from typing import List
 import random
 import time
@@ -16,8 +14,9 @@ import json
 import gzip
 import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from sqlalchemy import create_engine
+# from sqlalchemy import create_engine
 import libsql_experimental as libsql
+# import libsql_client as libsql
 
 
 import redis
@@ -46,8 +45,9 @@ def cache(func):
 
 app = Flask(__name__)
 
-# con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
+# con = libsql.create_client_sync(f"{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}")
+con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+# con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
 
@@ -71,9 +71,11 @@ def markowitz_main():
       '%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
   columns_str = ', '.join([f'"{asset}"' for asset in assets if asset.isidentifier()])
-  # rets_2 = con.execute(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
-  # print(rets_2[0:10])
-  rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", con, params=(start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
+  results = con.execute(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
+  rets = pd.DataFrame(results, columns=["Date"] + assets).set_index('Date').pct_change().iloc[1:]
+  # SQLAlchemy takes the function size beyond AWS 250MB limit, so I have to build DataFrames more manually for now.
+  # rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", con,
+  #                    params=(start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
   result = main(assets, rets, allowShortSelling, R_f=r)
 
   # Compress the response to enable larger payload
@@ -174,7 +176,9 @@ def get_option_price():
   assert isinstance(ticker, str), "ticker should be a string"
   R_f: float = float(request.args.get('R_f'))
 
-  price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", con, index_col='Date', parse_dates=["Date"])
+  results = con.execute(f"SELECT Date, {ticker} FROM price_history").fetchall()
+  price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+  # price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", con, index_col='Date', parse_dates=["Date"])
   S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
   returns = price_history.pct_change()
   sigma = np.sqrt(365) * returns.std().iloc[0]
