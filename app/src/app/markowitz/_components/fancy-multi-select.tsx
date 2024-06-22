@@ -9,11 +9,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { PageParams } from '../page'
 import { Spinner, Badge } from '@radix-ui/themes'
 
-export type Asset = Record<'value' | 'label', string>
-
 const DEBOUNCE_TIME = 150
 
-export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: Asset[]; pageParams: PageParams }) {
+export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: string[]; pageParams: PageParams }) {
   const selectedAssets = pageParams.assets
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -41,8 +39,8 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: A
     )
   }
 
-  const handleUnselect = (asset: Asset) => {
-    setSelected((prev) => prev.filter((s) => s !== asset.value))
+  const handleUnselect = (asset: string) => {
+    setSelected((prev) => prev.filter((s) => s !== asset))
   }
   React.useEffect(() => {
     if (!open) update()
@@ -75,11 +73,10 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: A
       <div className='group border border-input px-3 py-2 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'>
         <div className='flex gap-1 flex-wrap'>
           {selected
-            .map((s) => ({ value: s, label: s }))
             .map((asset) => {
               return (
-                <Badge key={asset.value} variant='soft'>
-                  {asset.label}
+                <Badge key={asset} variant='soft'>
+                  {asset}
                   <button
                     className='ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
                     onKeyDown={(e) => {
@@ -118,26 +115,26 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: A
         </div>
       </div>
       <div className='relative mt-2'>
-        {open && assets.filter((asset) => !selected.includes(asset.value)).length > 0 ? (
+        {open && assets.filter((asset) => !selected.includes(asset)).length > 0 ? (
           <div className='absolute w-full z-50 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in'>
             <CommandGroup className='h-full max-h-96 overflow-auto'>
               {assets
-                .filter((asset) => !selected.includes(asset.value))
+                .filter((asset) => !selected.includes(asset))
                 .map((asset) => {
                   return (
                     <CommandItem
-                      key={asset.value}
+                      key={asset}
                       onMouseDown={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                       }}
                       onSelect={(value) => {
                         setInputValue('')
-                        setSelected((prev) => [...prev, asset.value])
+                        setSelected((prev) => [...prev, asset])
                       }}
                       className={'cursor-pointer'}
                     >
-                      {asset.label}
+                      {asset}
                     </CommandItem>
                   )
                 })}

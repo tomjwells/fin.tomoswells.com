@@ -1,5 +1,4 @@
 import numpy as np
-import concurrent.futures
 from typing import Literal
 from datetime import datetime
 from modules.derivatives.monte_carlo import monte_carlo
@@ -17,18 +16,39 @@ import time
 import json
 import gzip
 import os
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from sqlalchemy import create_engine
+
+
+import redis
+import functools
+import pickle
+
+r = redis.Redis.from_url(url=os.getenv(
+    "REDIS_URL").replace("redis://", "rediss://"))
+
+# Decorator to cache the result of a function using Redis
+
+
+def cache(func):
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+    if (val := r.get(key)) is not None:
+      print("Cache hit!")
+      return pickle.loads(val)
+    else:
+      print("Cache miss!")
+      val = func(*args, **kwargs)
+      r.set(key, pickle.dumps(val))
+      return val
+  return wrapper
 
 
 app = Flask(__name__)
-app.config["CACHE_REDIS_URL"] = os.environ.get(
-    "REDIS_URL").replace("redis://", "rediss://")
-cache = Cache(app, config={'CACHE_TYPE': 'RedisCache'})
-timeout = 7*24*60*60
 
-
-@app.route("/")
-def hello_main():
-  return "<p>Hello, World!</p>"
+engine = create_engine(f"sqlite+{os.getenv("TURSO_DATABASE_URL")}/?authToken={os.getenv(
+    "TURSO_AUTH_TOKEN")}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
 
@@ -40,13 +60,23 @@ def markowitz_main():
   endYear: int = int(request.args.get('endYear'))
   r: float = float(request.args.get('r'))
   allowShortSelling: bool = request.args.get('allowShortSelling') == 'true'
-  print(f"{allowShortSelling=}")
+
   assert isinstance(assets, list), "assets should be a list"
   assert isinstance(startYear, int), "startYear should be a int"
   assert isinstance(endYear, int), "endYear should be a int"
   assert isinstance(allowShortSelling,
                     bool), "allowShortSelling should be a bool"
-  result = main(assets, startYear, endYear, allowShortSelling, R_f=r)
+
+  start_date = f'{startYear}-01-01'
+  end_date = datetime.now().strftime(
+      '%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
+
+  columns_str = ', '.join(
+      [f'"{asset}"' for asset in assets if asset.isidentifier()])
+  rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", engine, params=(
+      start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
+  result = main(assets, rets, allowShortSelling, R_f=r)
+
   # Compress the response to enable larger payload
   content = gzip.compress(json.dumps(result).encode('utf8'), 5)
   response = make_response(content)
@@ -55,38 +85,64 @@ def markowitz_main():
   return response
 
 
-@app.route("/api/markowitz/stocks")
-@cache.memoize(timeout=timeout)
-def markowitz_stocks():
-  tickers = pd.read_html(
-      'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]
-  tickers_list: List[str] = tickers['Symbol'].to_list()
-  assert isinstance(tickers_list, list) and all(isinstance(i, str)
-                                                for i in tickers_list), "tickers_list should be a list of strings"
-  return [{"value": ticker, "label": ticker} for ticker in tickers_list]
+@app.route("/api/seed_db")
+def seed_db():
+  if app.debug == True:
+    risk_free_rate = yf.download("^IRX", progress=False,)[
+        'Adj Close'].tail(1)/100
+    risk_free_rate.to_sql(name='risk_free_rate',
+                          con=engine, if_exists='replace')
+    price_history = download_symbols(pd.read_html(
+        'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
+    returns_history = price_history.pct_change().dropna()
+    price_history.to_sql(name='price_history', con=engine,
+                         if_exists='replace', chunksize=500)
+    # May need to adjust chunksize, or engine timeout
+    returns_history.to_sql(name='returns_history',
+                           con=engine, if_exists='replace', chunksize=500)
+
+    return jsonify({"message": "Database seeded successfully"})
+  else:
+    return jsonify({"error": "Cannot seed database in production"}), 400
 
 
-@app.route("/api/utils/risk-free-rate")
-@cache.memoize(timeout=timeout)
-def get_risk_free():
-  # Get the risk-free rate
-  risk_free_rate: float = yf.download("^IRX", progress=False,)[
-      'Adj Close'].mean()/100
-  assert isinstance(risk_free_rate, float), "risk_free_rate should be a float"
-  return jsonify(risk_free_rate)
+@cache
+def download_symbols(symbols: List[str]) -> pd.DataFrame:
+  """
+    Downloads the adjusted close prices for the tickers in parallel
+  """
+
+  # Download data in parallel
+  with ThreadPoolExecutor() as executor:
+    results = executor.map(lambda ticker: get_returns(ticker), symbols)
+
+  # Create a DataFrame from the results
+  return pd.concat(list(results), axis=1, keys=symbols)
 
 
-@app.route("/api/stock/<ticker>")
-def get_stock_price(ticker: str):
-  if not isinstance(ticker, str):
-    return jsonify({'error': 'Invalid ticker'}), 400
-  try:
-    stock = yf.Ticker(ticker)
-    price = stock.info['currentPrice']
-  except Exception as e:
-    return jsonify({'error': str(e)}), 500
+@cache
+def get_returns(ticker: str) -> pd.Series:
+  # yfinance.download frequently errors, this wrapper makes downloading reliable
+  for _ in range(int(1e5)):
+    with ThreadPoolExecutor() as executor:
+      future = executor.submit(download_data, ticker)
+      try:
+        price_data = future.result(timeout=2)  # Timeout after 2 seconds
+        if price_data is not None:
+          return price_data['Adj Close']
+      except TimeoutError:
+        print("yfinance request timed out. Retrying...")
+      except Exception as e:
+        print(f"An error occurred: {e}. Retrying...")
+      time.sleep(2)
 
-  return jsonify({'ticker': ticker, 'price': price})
+
+@cache
+def download_data(ticker: str) -> pd.Series:
+  """
+    Downloads the adjusted close prices for a given ticker and calculates the daily returns
+  """
+  return yf.download(ticker.replace('.', '-'), progress=False)
 
 
 # Derivatives
@@ -113,24 +169,30 @@ def get_option_price():
   tau = (T - t).days / 365
   K: float = float(request.args.get('K'))
   assert isinstance(K, (float)), "K should be a float"
-  ticker = request.args.get('ticker')
+  ticker = request.args.get('ticker') if request.args.get(
+      'ticker').isidentifier() else None
   assert isinstance(ticker, str), "ticker should be a string"
-  r: float = get_risk_free_rate()
-  S_0, sigma = get_stock_data(ticker)
+  R_f: float = float(request.args.get('R_f'))
 
-  print("S_0: ", S_0, "sigma: ", sigma, "r: ", r, "K: ", K, "tau: ", tau,
+  price_history = pd.read_sql(f"SELECT Date, {
+                              ticker} FROM price_history", engine, index_col='Date', parse_dates=["Date"])
+  S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
+  returns = price_history.pct_change()
+  sigma = np.sqrt(365) * returns.std().iloc[0]
+
+  print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
         "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
 
   if method == 'binomial':
     num_steps = int(1e3)
     if option_type == 'european':
-      return jsonify(EUPrice(instrument, S_0, sigma, r, K, tau, num_steps))
+      return jsonify(EUPrice(instrument, S_0, sigma, R_f, K, tau, num_steps))
     elif option_type == 'american':
-      return jsonify(USPrice(instrument, S_0, sigma, r, K, tau, num_steps))
+      return jsonify(USPrice(instrument, S_0, sigma, R_f, K, tau, num_steps))
 
   if method == 'black-scholes':
     if option_type == 'european':
-      bs = black_scholes_option(S_0, K, tau, r, sigma)
+      bs = black_scholes_option(S_0, K, tau, R_f, sigma)
       return jsonify(bs.value(instrument))
     if option_type == 'american':
       return jsonify({"error": "American options are not supported"})
@@ -139,47 +201,6 @@ def get_option_price():
     num_trials = int(1e5)
     num_timesteps = 100
     if option_type == 'european':
-      return jsonify(monte_carlo(instrument, S_0, K, tau, r, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))
+      return jsonify(monte_carlo(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))
     elif option_type == 'american':
-      return jsonify({"error": "American options are not supported yet"})
-
-
-def download_data(ticker: str):
-  return yf.download(ticker, progress=False)['Adj Close']
-
-# @cache.memoize(timeout=timeout)
-
-
-def get_stock_data(ticker: str) -> tuple[float, float]:
-  # Get the stock data
-  print("ticker: ", ticker)
-  stock_data: pd.Series | None = None
-  for _ in range(10):
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-      future = executor.submit(download_data, ticker)
-      try:
-        stock_data = future.result(timeout=1)  # Timeout after 1 second
-        if stock_data is not None:
-          break
-      except concurrent.futures.TimeoutError:
-        print("yfinance request timed out. Retrying...")
-      except Exception as e:
-        print(f"An error occurred: {e}. Retrying...")
-      time.sleep(1)
-
-  if stock_data is None:
-    print("Failed to download stock data after 10 attempts.")
-  assert isinstance(
-      stock_data, pd.Series), "stock_data should be a pandas Series"
-  returns = stock_data.pct_change()
-  sigma = returns.std()
-  return stock_data.iloc[-1], np.sqrt(365) * sigma
-
-
-@cache.memoize(timeout=timeout)
-def get_risk_free_rate() -> float:
-  # Get the risk-free rate
-  risk_free_rate: float = yf.download("^IRX", progress=False,)[
-      'Adj Close'].mean()/100
-  assert isinstance(risk_free_rate, float), "risk_free_rate should be a float"
-  return risk_free_rate
+      return jsonify({"error": "American options are not supported"})

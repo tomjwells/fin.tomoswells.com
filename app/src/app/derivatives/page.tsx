@@ -4,32 +4,32 @@ import { redirect } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger } from '~/shadcn/Tabs'
 import SelectExpirationDate from './_components/SelectExpirationDate'
 import SetStrike from './_components/SetStrike'
-import { Asset } from '../markowitz/_components/fancy-multi-select'
 import SelectTicker from './_components/SelectTicker'
 import { Suspense } from 'react'
 import React from 'react'
 import z from 'zod'
 import { InfoCircledIcon } from '@radix-ui/react-icons'
+import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice } from '~/sqlite'
 
 type Method = {
   label: string
-  value: 'black-scholes' | 'monte-carlo' | 'binomial'
+  method: 'black-scholes' | 'monte-carlo' | 'binomial'
   tooltip?: string
 }
 const METHODS: Method[] = [
   {
     label: 'Black-Scholes',
-    value: 'black-scholes',
+    method: 'black-scholes',
   },
   {
     label: 'Monte Carlo',
-    value: 'monte-carlo',
+    method: 'monte-carlo',
     tooltip:
       'Monte Carlo is a statistical method that relies on a large number of random trials. This randomness can be seen by refreshing the page multiple times, which shows the Monte Carlo result jump around with a mean of the correct value. The method can be made arbitrarily accurate by increasing the number of trials (although the computation will take longer).',
   },
   {
     label: 'Binomial',
-    value: 'binomial',
+    method: 'binomial',
   },
 ]
 
@@ -38,6 +38,9 @@ const pageParamsSchema = z.object({
   T: z.string().refine((v) => /\d{4}-\d{2}-\d{2}/.test(v)),
   K: z.string().refine((v) => /^\d+(\.\d+)?$/.test(v)),
   ticker: z.string(),
+  R_f: z
+    .string()
+    .refine((v) => /^\d+(\.\d+)?$/.test(v))
 })
 export type PageParams = z.infer<typeof pageParamsSchema>
 type OptionPriceParams = PageParams & {
@@ -52,19 +55,18 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
     redirect(
       `?${new URLSearchParams({
         optionType: pageParamsSchema.shape.optionType.safeParse(searchParams.optionType).success ? (searchParams?.optionType as PageParams['optionType']) : 'european',
-        T: pageParamsSchema.shape.T.safeParse(searchParams.T).success ? (searchParams?.T as PageParams['T']) : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
+        T: pageParamsSchema.shape.T.safeParse(searchParams.T).success
+          ? (searchParams?.T as PageParams['T'])
+          : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
         ticker,
         K: pageParamsSchema.shape.K.safeParse(searchParams.K).success ? (searchParams?.K as PageParams['K']) : (await fetchUnderlyingPrice(ticker)).toFixed(0),
+        R_f: pageParamsSchema.shape.R_f.safeParse(searchParams.R_f).success ? (searchParams?.R_f as PageParams['R_f']) : (await fetchRiskFreeRate).toString(),
       })}`
     )
 
   const pageParams = pageParamsSchema.parse(searchParams)
 
   const methods = pageParams.optionType === 'european' ? METHODS : ([METHODS[2]] as Method[])
-
-  const riskFreeRate = await fetch(`${env.APP_URL}/api/utils/risk-free-rate`, {
-    next: { revalidate: 1 * 24 * 60 * 60 },
-  }).then((r) => r.json())
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-6'>
@@ -90,10 +92,10 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         </Heading>
         <Grid columns={{ initial: '1', sm: '3' }} gap='3' width='auto'>
           <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-            <SelectTicker pageParams={pageParams} assets={(await fetch(`${env.APP_URL}/api/markowitz/stocks`).then((r) => r.json())) as Asset[]} />
+            <SelectTicker pageParams={pageParams} assets={await fetchAssets} />
           </Suspense>
           <Suspense>
-            <SelectExpirationDate pageParams={pageParams} />
+            <SelectExpirationDate {...pageParams} />
           </Suspense>
           <Suspense fallback={<Skeleton>Loading</Skeleton>}>
             <SetStrike pageParams={pageParams} currentPrice={await fetchUnderlyingPrice(pageParams.ticker)} />
@@ -103,13 +105,15 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <ul className='list-disc my-6 ml-6'>
           <li>The list of selectable companies is based on the S&P 500 index.</li>
           <li>
-            <Text>The risk free rate is set by default to that of the three-month U.S. Treasury bill (currently: r = {(100 * riskFreeRate).toFixed(2)}%).</Text>
+            <Suspense>
+              <Text>The risk free rate is set by default to that of the three-month U.S. Treasury bill (currently: r = {(100 * parseFloat(pageParams.R_f)).toFixed(2)}%).</Text>
+            </Suspense>
           </li>
         </ul>
 
         <Heading size='5'>Results</Heading>
 
-        {methods.map(async ({ label, value, tooltip }) => (
+        {methods.map(async ({ label, method, tooltip }) => (
           <div key={label} className='flex flex-col gap-4 my-2'>
             <Flex gap='3'>
               <span className='flex flex-col gap-1 w-fit'>
@@ -143,7 +147,14 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
                 </Heading>
                 <Heading size='6'>
                   <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-                    <FetchOptionPrice {...pageParams} method={value} instrument='call' />
+                    {'$' +
+                      (
+                        await fetchOptionPrice({
+                          ...pageParams,
+                          method,
+                          instrument: 'call',
+                        })
+                      ).toFixed(2)}
                   </Suspense>
                 </Heading>
               </div>
@@ -153,7 +164,14 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
                 </Heading>
                 <Heading size='6'>
                   <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-                    <FetchOptionPrice {...pageParams} method={value} instrument='put' />
+                    {'$' +
+                      (
+                        await fetchOptionPrice({
+                          ...pageParams,
+                          method,
+                          instrument: 'put',
+                        })
+                      ).toFixed(2)}
                   </Suspense>
                 </Heading>
               </div>
@@ -165,29 +183,19 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   )
 }
 
-const FetchOptionPrice = async (props: OptionPriceParams) => '$' + (await fetchOptionPrice(props)).toFixed(2)
-
-const fetchOptionPrice = (props: OptionPriceParams) =>
-  fetch(`${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(props)}`, {
-    // Don't cache monte-carlo to show randomness
-    cache: env.NODE_ENV === 'production' && props.method !== 'monte-carlo' ? 'force-cache' : 'no-store',
+const fetchOptionPrice = (params: OptionPriceParams) =>
+  fetch(`${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(params)}`, {
+    cache: 'no-store',
   }).then(async (res) => {
     if (!res.ok) {
       console.log('HTTP-Error: ' + res.status)
       const message = await res.text()
       console.log({ message })
       if (message.includes('less than T')) {
-        redirect(`?${new URLSearchParams({ ...props, T: new Date().getFullYear() + '-' + (new Date().getMonth() + 2).toString().padStart(2, '0') + '-01' })}`)
+        redirect(`?${new URLSearchParams({ ...params, T: new Date().getFullYear() + '-' + (new Date().getMonth() + 2).toString().padStart(2, '0') + '-01' })}`)
       } else {
-        console.log('Error URL:', `${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(props)}`)
+        console.log('Error URL:', `${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(params)}`)
       }
     }
     return (await res.json()) as number
   })
-
-const fetchUnderlyingPrice = async (ticker: string) =>
-  (
-    (await fetch(`${env.APP_URL}/api/stock/${ticker}`, {
-      next: { revalidate: 60 },
-    }).then((r) => r.json())) as { price: number }
-  ).price
