@@ -3,13 +3,7 @@ import { Flex, Select } from '@radix-ui/themes'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { PageParams } from '../page'
 
-export default function SelectTicker({
-  pageParams,
-  assets,
-}: {
-  pageParams: PageParams
-  assets: string[]
-}) {
+export default function SelectTicker({ pageParams, assets }: { pageParams: PageParams; assets: string[] }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -18,14 +12,10 @@ export default function SelectTicker({
       <label htmlFor='ticker'>Ticker</label>
       <Select.Root
         defaultValue={pageParams.ticker}
-        onValueChange={(value) => {
-          router.push(
-            `?${new URLSearchParams({
-              ...Object.fromEntries(searchParams ?? []),
-              ticker: value,
-            })}`,
-            { scroll: false }
-          )
+        onValueChange={(ticker) => {
+          const params = new URLSearchParams(searchParams)
+          params.set('ticker', ticker)
+          router.push(`?${params}`, { scroll: false })
         }}
       >
         <Select.Trigger className='w-36' />

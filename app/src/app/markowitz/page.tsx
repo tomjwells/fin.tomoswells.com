@@ -168,19 +168,6 @@ function calculateTangencyPortfolio(mu: number[], Sigma_inverse: number[][], ris
   return numerator.scale(1 / denominator).values
 }
 
-function calculateRisk(tangencyPortfolioWeights: number[], Sigma: number[][]) {
-  const tangencyPortfolioWeightsMatrix = new Matrix(
-    tangencyPortfolioWeights.length,
-    1,
-    tangencyPortfolioWeights.map((v) => [v])
-  )
-  const SigmaMatrix = new Matrix(Sigma.length, Sigma.length, Sigma)
-
-  const variance = tangencyPortfolioWeightsMatrix.transpose().multiply(SigmaMatrix.multiply(tangencyPortfolioWeightsMatrix))
-
-  return Math.sqrt(variance.values[0]![0]!)
-}
-
 async function ResultsSection({ pageParams, searchParams }: { pageParams: PageParams; searchParams?: Record<string, string | string[] | undefined> }) {
   try {
     const data = await fetchMPT(pageParams)
