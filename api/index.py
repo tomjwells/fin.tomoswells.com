@@ -5,7 +5,6 @@ from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.binomial_model import EUPrice, USPrice
 from modules.markowitz.main import main
-import yfinance as yf
 from flask import jsonify, make_response
 import pandas as pd
 from flask import Flask, request
@@ -23,8 +22,7 @@ import redis
 import functools
 import pickle
 
-r = redis.Redis.from_url(url=os.getenv(
-    "REDIS_URL").replace("redis://", "rediss://"))
+r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
 
@@ -46,8 +44,7 @@ def cache(func):
 
 app = Flask(__name__)
 
-engine = create_engine(f"sqlite+{os.getenv("TURSO_DATABASE_URL")}/?authToken={os.getenv(
-    "TURSO_AUTH_TOKEN")}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
+engine = create_engine(f"sqlite+{os.getenv("TURSO_DATABASE_URL")}/?authToken={os.getenv("TURSO_AUTH_TOKEN")}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
 
@@ -141,6 +138,7 @@ def download_data(ticker: str) -> pd.Series:
   """
     Downloads the adjusted close prices for a given ticker and calculates the daily returns
   """
+  import yfinance as yf
   return yf.download(ticker.replace('.', '-'), progress=False)
 
 
