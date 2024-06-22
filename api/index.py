@@ -46,7 +46,7 @@ import libsql_experimental as libsql
 app = Flask(__name__)
 
 # con = libsql.create_client_sync(f"{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}")
-con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+# con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
 # con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
@@ -71,6 +71,7 @@ def markowitz_main():
       '%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
   columns_str = ', '.join([f'"{asset}"' for asset in assets if asset.isidentifier()])
+  con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
   results = con.execute(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
   rets = pd.DataFrame(results, columns=["Date"] + assets).set_index('Date').pct_change().iloc[1:]
   # SQLAlchemy takes the function size beyond AWS 250MB limit, so I have to build DataFrames more manually for now.
@@ -175,6 +176,7 @@ def get_option_price():
   assert isinstance(ticker, str), "ticker should be a string"
   R_f: float = float(request.args.get('R_f'))
 
+  con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
   results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
   price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
   # price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", con, index_col='Date', parse_dates=["Date"])
