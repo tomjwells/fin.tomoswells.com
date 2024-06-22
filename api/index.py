@@ -171,12 +171,11 @@ def get_option_price():
   tau = (T - t).days / 365
   K: float = float(request.args.get('K'))
   assert isinstance(K, (float)), "K should be a float"
-  ticker = request.args.get('ticker') if request.args.get(
-      'ticker').isidentifier() else None
+  ticker = request.args.get('ticker') if request.args.get('ticker').isidentifier() else None
   assert isinstance(ticker, str), "ticker should be a string"
   R_f: float = float(request.args.get('R_f'))
 
-  results = con.execute(f"SELECT Date, {ticker} FROM price_history").fetchall()
+  results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
   price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
   # price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", con, index_col='Date', parse_dates=["Date"])
   S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
