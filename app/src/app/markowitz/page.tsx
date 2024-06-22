@@ -33,7 +33,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
     const params = new URLSearchParams()
     const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BKR']
     defaultAssets.forEach((asset) => params.append('assets', asset))
-    params.append('r', (await fetchRiskFreeRate) as string)
+    params.append('r', `${await fetchRiskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
     params.append('allowShortSelling', `${true}`)
