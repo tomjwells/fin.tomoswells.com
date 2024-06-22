@@ -69,8 +69,7 @@ def markowitz_main():
 
   columns_str = ', '.join(
       [f"'{asset}'" for asset in assets if asset.isidentifier()])
-  rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", engine, params=(
-      start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
+  rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", engine, params=(start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
   result = main(assets, rets, allowShortSelling, R_f=r)
 
   # Compress the response to enable larger payload
@@ -89,8 +88,7 @@ def seed_db():
         'Adj Close'].tail(1)/100
     risk_free_rate.to_sql(name='risk_free_rate',
                           con=engine, if_exists='replace')
-    price_history = download_symbols(pd.read_html(
-        'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
+    price_history = download_symbols(pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
     returns_history = price_history.pct_change().dropna()
     price_history.to_sql(name='price_history', con=engine,
                          if_exists='replace', chunksize=500)
@@ -172,8 +170,7 @@ def get_option_price():
   assert isinstance(ticker, str), "ticker should be a string"
   R_f: float = float(request.args.get('R_f'))
 
-  price_history = pd.read_sql(f"SELECT Date, {
-                              ticker} FROM price_history", engine, index_col='Date', parse_dates=["Date"])
+  price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", engine, index_col='Date', parse_dates=["Date"])
   S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
   returns = price_history.pct_change()
   sigma = np.sqrt(365) * returns.std().iloc[0]
