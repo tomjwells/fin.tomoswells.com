@@ -18,7 +18,7 @@ type TangencyPortfolio = {
 }
 
 export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio, allowShortSelling }: { mptData: MPTData; riskFreeRate: number; tangencyPortfolio: TangencyPortfolio; allowShortSelling: boolean }) {
-  const data = mptData.data
+  const data = mptData.efficient_frontier
   const slope = (tangencyPortfolio.return - riskFreeRate) / (tangencyPortfolio.risk - 0)
   console.log({ tangency_portfolio: tangencyPortfolio })
 

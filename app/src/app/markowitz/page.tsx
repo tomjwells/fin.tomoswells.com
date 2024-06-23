@@ -5,13 +5,13 @@ import { FancyMultiSelect } from './_components/fancy-multi-select'
 import { env } from '~/env'
 import RiskFreeRateSlider from './_components/RiskFreeRateSlider'
 import z from 'zod'
-import TangencyPortfolioPieChart from './_components/TangencyPortfolioPieChart'
 import ChartJSChart from './_components/ChartJSChart'
 import AdvancedControls from './_components/AdvancedControls'
 import NextLink from 'next/link'
 import { Vector, Matrix } from 'ts-matrix'
 import AllowShortSelling from './_components/AllowShortSellingSwitch'
 import { fetchAssets, fetchRiskFreeRate } from '~/sqlite'
+import TangencyPortfolioPieChart from './_components/TangencyPortfolioPieChart'
 
 const pageParamsSchema = z.object({
   assets: z.array(z.string()),
@@ -33,7 +33,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
     const params = new URLSearchParams()
     // const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BRK']
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
-    getRandomElements(assets, 100).forEach((asset) => params.append('assets', asset))
+    getRandomElements(assets, 80).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
@@ -62,6 +62,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
           .
         </Text>
       </Flex>
+
       <Flex direction='column' gap='2' my='4'>
         <Heading size='3'>Choose a collection of assets to consider for a candidate portfolio.</Heading>
         <Text size='1' color='gray'>
@@ -90,6 +91,9 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
 
         <AdvancedControls pageParams={pageParams} />
 
+        <Heading size='5' mt='4'>
+          Results
+        </Heading>
         <Suspense
           fallback={
             <Flex justify='center' align='center' height='400px'>
@@ -97,12 +101,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
             </Flex>
           }
         >
-          <Heading size='5' mt='4'>
-            Results
-          </Heading>
-          <Suspense>
-            <ResultsSection pageParams={pageParams} searchParams={searchParams} />
-          </Suspense>
+          <ResultsSection pageParams={pageParams} searchParams={searchParams} />
         </Suspense>
       </Flex>
     </Card>
@@ -111,10 +110,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
 
 const MPTSchema = z.object({
   tickers: z.array(z.string()),
-  mu: z.array(z.number()),
-  Sigma: z.array(z.array(z.number())),
-  Sigma_inverse: z.array(z.array(z.number())),
-  data: z.array(
+  efficient_frontier: z.array(
     z.object({
       weights: z.array(z.number()),
       return: z.number(),
@@ -134,6 +130,7 @@ const MPTSchema = z.object({
     return: z.number(),
     risk: z.number(),
   }),
+  sortino_variance: z.number(),
 })
 export type MPTData = z.infer<typeof MPTSchema>
 
@@ -145,42 +142,21 @@ async function fetchMPT(pageParams: PageParams) {
   queryParams.append('r', pageParams.r.toString())
   queryParams.append('allowShortSelling', pageParams.allowShortSelling.toString())
 
+  // Custom timeout to allow fetch to wait longer
+  AbortSignal.timeout ??= function timeout(ms) {
+    const ctrl = new AbortController()
+    setTimeout(() => ctrl.abort(), ms)
+    return ctrl.signal
+  }
+
   console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
-  const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { cache: 'no-cache' })
+  const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { cache: 'no-cache', signal: AbortSignal.timeout(60_000) })
   return MPTSchema.parse(await response.json())
-}
-
-function calculateTangencyPortfolio(mu: number[], Sigma_inverse: number[][], riskFreeRate: number): number[] {
-  const invSigma = new Matrix(Sigma_inverse.length, Sigma_inverse.length, Sigma_inverse)
-  const onesVector = new Matrix(
-    mu.length,
-    1,
-    mu.map(() => [1])
-  )
-  const subtracted = new Matrix(
-    mu.length,
-    1,
-    mu.map((v) => [v - riskFreeRate])
-  )
-
-  const numerator = new Vector(invSigma.multiply(subtracted).transpose().values[0])
-  const denominator = onesVector.transpose().multiply(invSigma).multiply(subtracted).values[0]![0]!
-
-  return numerator.scale(1 / denominator).values
 }
 
 async function ResultsSection({ pageParams, searchParams }: { pageParams: PageParams; searchParams?: Record<string, string | string[] | undefined> }) {
   try {
     const data = await fetchMPT(pageParams)
-    const tangencyPortfolioWeights = calculateTangencyPortfolio(data.mu, data.Sigma_inverse, pageParams.r)
-    const tangencyPortfolio = data.tangency_portfolio
-
-    // Calculate Sortino Ratio
-    const dailyPortfolioReturns = []
-    for (let i = 0; i < data.returns[0]!.length; i++) {
-      dailyPortfolioReturns.push(tangencyPortfolioWeights.reduce((acc, weight, j) => acc + weight * data.returns[j]![i]!, 0))
-    }
-    const sortinoVariance = (252 / data.returns[0]!.length) * dailyPortfolioReturns.reduce((acc, returnVal) => acc + Math.min(0, returnVal) ** 2, 0)
 
     return (
       <Flex direction='column' gap='6'>
@@ -192,7 +168,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
         >
           <Box height='600px' width='9' p='4'>
             <Suspense>
-              <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={tangencyPortfolio} allowShortSelling={pageParams.allowShortSelling} />
+              <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={data.tangency_portfolio} allowShortSelling={pageParams.allowShortSelling} />
             </Suspense>
           </Box>
         </Card>
@@ -203,13 +179,13 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
               <Heading size='4' color='gray'>
                 Expected Return
               </Heading>
-              <Heading size='6'>{formatPercent(tangencyPortfolio.return)}</Heading>
+              <Heading size='6'>{formatPercent(data.tangency_portfolio.return)}</Heading>
             </div>
             <div className='w-1/2'>
               <Heading size='4' color='gray'>
                 Volatility
               </Heading>
-              <Heading size='6'>{formatPercent(tangencyPortfolio.risk)}</Heading>
+              <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
             </div>
           </div>
           <div className='flex gap-4'>
@@ -217,19 +193,19 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
               <Heading size='4' color='gray'>
                 Sharpe Ratio
               </Heading>
-              <Heading size='6'>{((tangencyPortfolio.return - pageParams.r) / (tangencyPortfolio.risk - 0)).toFixed(2)}</Heading>
+              <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / (data.tangency_portfolio.risk - 0)).toFixed(2)}</Heading>
             </div>
             <div className='w-1/2'>
               <Heading size='4' color='gray'>
                 Sortino Ratio
               </Heading>
-              <Heading size='6'>{((tangencyPortfolio.return - pageParams.r) / Math.sqrt(sortinoVariance)).toFixed(2)}</Heading>
+              <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
             </div>
           </div>
         </div>
         <Suspense>
           <Heading size='4'>The Tangency Portfolio</Heading>
-          <TangencyPortfolioPieChart tangencyPortfolio={tangencyPortfolio} pageParams={pageParams} />
+          <TangencyPortfolioPieChart mptData={data} />
         </Suspense>
       </Flex>
     )

@@ -5,16 +5,12 @@ import { PageParams } from '../page';
 import { Bar } from 'react-chartjs-2';
 import { Chart, BarElement, BarController, CategoryScale, LinearScale } from 'chart.js';
 import { getRandomColor } from './ChartJSChart';
+import type { MPTData } from '../page'
+
 Chart.register(BarController, BarElement, CategoryScale, LinearScale);
 
-type TangencyPortfolio = {
-  weights: number[];
-  return: number;
-  risk: number;
-}
-
-export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParams }: { tangencyPortfolio: TangencyPortfolio; pageParams: PageParams }) {
-  const tickers = pageParams.assets
+export default function TangencyPortfolioPieChart({ mptData }: { mptData: MPTData }) {
+  const {tickers, tangency_portfolio: tangencyPortfolio} = mptData
 
   // Prepare the data for the bar chart
   const chartData = {
@@ -27,14 +23,14 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
         backgroundColor: tickers.map((ticker) => getRandomColor(ticker)),
       },
     ],
-  };
+  }
 
   // Prepare the options for the bar chart
   const options = {
     responsive: true,
     plugins: {
       legend: {
-        display: false
+        display: false,
       },
       title: {
         display: true,
@@ -46,12 +42,12 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
         ticks: {
           // Include a percent sign in the ticks
           callback: function (value: number) {
-            return (100 * value).toFixed(0) + '%';
-          }
-        }
-      }
+            return (100 * value).toFixed(0) + '%'
+          },
+        },
+      },
     },
-  };
+  }
 
   return (
     <>
@@ -66,18 +62,15 @@ export default function TangencyPortfolioPieChart({ tangencyPortfolio, pageParam
         </Table.Header>
 
         <Table.Body>
-          {
-            tickers.map((ticker, index) => (
-              <Table.Row key={ticker}>
-                <Table.RowHeaderCell>{ticker}</Table.RowHeaderCell>
-                <Table.Cell>{(100 * tangencyPortfolio.weights[index]!).toFixed(2)}%</Table.Cell>
-              </Table.Row>
-            ))
-          }
+          {tickers.map((ticker, index) => (
+            <Table.Row key={ticker}>
+              <Table.RowHeaderCell>{ticker}</Table.RowHeaderCell>
+              <Table.Cell>{(100 * tangencyPortfolio.weights[index]!).toFixed(2)}%</Table.Cell>
+            </Table.Row>
+          ))}
         </Table.Body>
       </Table.Root>
     </>
-  );
-
+  )
 }
 

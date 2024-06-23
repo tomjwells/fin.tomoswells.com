@@ -81,14 +81,8 @@ def markowitz_main():
   # rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", con,
   #                    params=(start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
   result = main(rets, allowShortSelling, R_f=r)
-  result["tickers"] = assets
 
-  # Compress the response to enable larger payload
-  content = gzip.compress(json.dumps(result).encode('utf8'), 5)
-  response = make_response(content)
-  response.headers['Content-length'] = str(len(content))
-  response.headers['Content-Encoding'] = 'gzip'
-  return response
+  return jsonify(result)
 
 
 @app.route("/api/seed_db")

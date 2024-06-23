@@ -38,9 +38,7 @@ const pageParamsSchema = z.object({
   T: z.string().refine((v) => /\d{4}-\d{2}-\d{2}/.test(v)),
   K: z.string().refine((v) => /^\d+(\.\d+)?$/.test(v)),
   ticker: z.string(),
-  R_f: z
-    .string()
-    .refine((v) => /^\d+(\.\d+)?$/.test(v))
+  R_f: z.string().refine((v) => /^\d+(\.\d+)?$/.test(v)),
 })
 export type PageParams = z.infer<typeof pageParamsSchema>
 type OptionPriceParams = PageParams & {
@@ -147,14 +145,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
                 </Heading>
                 <Heading size='6'>
                   <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-                    {'$' +
-                      (
-                        await fetchOptionPrice({
-                          ...pageParams,
-                          method,
-                          instrument: 'call',
-                        })
-                      ).toFixed(2)}
+                    <OptionPrice {...pageParams} method={method} instrument='call' />
                   </Suspense>
                 </Heading>
               </div>
@@ -164,14 +155,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
                 </Heading>
                 <Heading size='6'>
                   <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-                    {'$' +
-                      (
-                        await fetchOptionPrice({
-                          ...pageParams,
-                          method,
-                          instrument: 'put',
-                        })
-                      ).toFixed(2)}
+                    <OptionPrice {...pageParams} method={method} instrument='put' />
                   </Suspense>
                 </Heading>
               </div>
@@ -181,6 +165,11 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
       </Flex>
     </Card>
   )
+}
+
+async function OptionPrice(params: OptionPriceParams) {
+  const price = await fetchOptionPrice(params)
+  return <>{price ? `$${price.toFixed(2)}` : <Skeleton />}</>
 }
 
 const fetchOptionPrice = (params: OptionPriceParams) =>

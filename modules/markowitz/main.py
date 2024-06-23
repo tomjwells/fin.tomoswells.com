@@ -11,8 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from functools import partial
 
 
-def efficient_frontier(mu: npt.NDArray[np.floating[Any]], Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[np.floating[Any], np.floating[Any]]:
-  inv_Sigma = np.linalg.inv(Sigma)
+def efficient_frontier(mu: npt.NDArray[np.floating[Any]], inv_Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[np.floating[Any], np.floating[Any]]:
   ones = np.ones(len(mu))
   a = mu.T @ inv_Sigma @ mu
   c = mu.T @ inv_Sigma @ ones
@@ -30,17 +29,27 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]], Sigma: np.ndarray[Any,
   return weights, np.sqrt(var_p)
 
 
-def port_sharpe(rets, cov, weights):
-  return port_return(rets, weights) / port_volatility(cov, weights)
+def calculate_sortino_variance(rets, weights, T):
+  """
+    Calculate the Sortino variance of a portfolio. Calculated according to the definition in
+    https://www.cmegroup.com/education/files/rr-sortino-a-sharper-ratio.pdf.
+    The Sortino variance measures the downside volatility of a portfolio below a target return
+      - rets: DataFrame of daily returns
+      - weights: Portfolio weights
+      - T: Target return (assumed annualized)
+  """
+  # Calculate the portfolio's return (mean of portfolio returns)
+  daily_portfolio_returns = (rets * weights).sum(axis=1)
 
+  # Calculate the downside deviation
+  squared_deviations = np.square(np.minimum(0, daily_portfolio_returns - T/252))
+  downside_variance_annualized = 252 * np.mean(squared_deviations)
 
-def port_volatility(cov, weights):
-  # annualized
-  return np.sqrt(np.dot(weights, np.dot(cov, weights)))
+  R_p_annualized = 252 * np.mean(daily_portfolio_returns)
+  varianve_annualized = 252 * np.var(daily_portfolio_returns)
+  print(f"Sharpe Ratio: {(R_p_annualized - T) / np.sqrt(varianve_annualized)} Sortino Ratio: {(R_p_annualized - T) / np.sqrt(downside_variance_annualized)}")
 
-
-def port_return(mu, weights):
-  return np.dot(mu, weights)  # annualized
+  return downside_variance_annualized
 
 
 def calculate_portfolio(R_p, S, q, G, h, A):
@@ -75,7 +84,7 @@ def efficient_frontier_numerical(mu, Sigma, R_p_linspace):
   return weights, risks
 
 
-def find_tangency_portfolio(mu, Sigma, R_f, allow_short_selling=False):
+def find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=False):
   """
     Function to find the tangency portfolio
     If short selling is allowed, the analytic solution is used
@@ -87,10 +96,9 @@ def find_tangency_portfolio(mu, Sigma, R_f, allow_short_selling=False):
   # Calculate the tangency portfolio
   if allow_short_selling:
     # Analytic solution
-    Sigma_inv = np.linalg.inv(Sigma)
     ones = np.ones(N)
-    tangency_weights = Sigma_inv @ (mu - R_f * ones) / \
-        (ones.T @ Sigma_inv @ (mu - R_f * ones))
+    subtracted = mu - R_f * ones
+    tangency_weights = inv_Sigma @ subtracted / (ones.T @ inv_Sigma @ subtracted)
   else:
     # See https://bookdown.org/compfinezbook/introcompfinr/Quadradic-programming.html#no-short-sales-tangency-portfolio for the mathematical formulation
     # Quadratic term
@@ -114,8 +122,7 @@ def find_tangency_portfolio(mu, Sigma, R_f, allow_short_selling=False):
 
   # Calculate the portfolio return and risk
   tangency_return = mu @ tangency_weights
-  tangency_risk = np.sqrt(
-      tangency_weights.T @ Sigma @ tangency_weights)
+  tangency_risk = np.sqrt(tangency_weights.T @ Sigma @ tangency_weights)
 
   return {
       "return": tangency_return,
@@ -134,30 +141,28 @@ def main(rets, allowShortSelling: bool, R_f: float):
   print(rets.head())
   mu = 252 * rets.mean()
   Sigma = 252 * rets.cov()
+  inv_Sigma = np.linalg.inv(Sigma)
 
   # Calculate the efficient frontier
   if allowShortSelling:
     max = 5.0
     min = -5.0
     R_p_linspace = np.linspace(min, max, num=1000)
-    weights, sigma_p = efficient_frontier(mu, Sigma, R_p_linspace)
+    weights, sigma_p = efficient_frontier(mu, inv_Sigma, R_p_linspace)
   else:
     max = np.max(mu)
     min = np.min(mu)
     R_p_linspace = np.linspace(min, max, num=300)
-    weights, sigma_p = efficient_frontier_numerical(
-        mu, Sigma, R_p_linspace)
+    weights, sigma_p = efficient_frontier_numerical(mu, Sigma, R_p_linspace)
 
-  tangency_portfolio = find_tangency_portfolio(
-      mu, Sigma, R_f, allow_short_selling=allowShortSelling)
+  tangency_portfolio = find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=allowShortSelling)
 
   print(weights)
   return {
-      "mu": mu.tolist(),
-      "Sigma": np.around(Sigma.values, 6).tolist(),
-      "Sigma_inverse": np.around(np.linalg.inv(Sigma), 6).tolist(),
-      "data": [{"return": round(R_p_linspace[i], 4), "risk": round(sigma_p[i], 4), "weights": np.around(weights[i], 4).tolist()} for i in range(len(R_p_linspace))],
+      "tickers": rets.columns.tolist(),
+      "efficient_frontier": [{"return": round(R_p_linspace[i], 4), "risk": round(sigma_p[i], 4), "weights": np.around(weights[i], 4).tolist()} for i in range(len(R_p_linspace))],
       "asset_datapoints": [{"ticker": rets.columns[i], "return": round(mu[i], 4), "risk": round(np.sqrt(Sigma.values[i][i]), 4)} for i in range(rets.shape[1])],
       "returns": [[round(val, 6) for val in rets[ticker].fillna(0).tolist()] for ticker in rets.columns],
-      "tangency_portfolio": tangency_portfolio
+      "tangency_portfolio": tangency_portfolio,
+      "sortino_variance": calculate_sortino_variance(rets, tangency_portfolio['weights'], R_f)
   }
