@@ -233,7 +233,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
     return (
       <Flex direction='column' justify='center'>
         <Text color='red'>
-          Something went wrong on the server. The server can time out (after 10s) if a large number of equities are passed as arguments. Please either{' '}
+          Something went wrong on the server. Large number of equities may cause the server to timeout before the request can be completed. Please either{' '}
           <Link asChild>
             <NextLink href={`?` + new URLSearchParams(searchParams as unknown as string).toString()}>try again</NextLink>
           </Link>
