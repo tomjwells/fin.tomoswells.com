@@ -70,14 +70,18 @@ def markowitz_main():
   end_date = datetime.now().strftime(
       '%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
-  columns_str = ', '.join([f'"{asset}"' for asset in assets if asset.isidentifier()])
+  columns = ['Date'] + assets
+  columns_str = ', '.join([f'`{col}`' for col in columns if col.isidentifier()])
   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-  results = con.execute(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
-  rets = pd.DataFrame(results, columns=["Date"] + assets).set_index('Date').pct_change().iloc[1:]
+  print(f"SELECT {columns_str} FROM price_history WHERE date BETWEEN ? AND ?")
+  results = con.execute(f"SELECT {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
+  print(results[0:5], results[-6:-1])
+  rets = pd.DataFrame(results, columns=columns).set_index('Date').pct_change().iloc[1:]
   # SQLAlchemy takes the function size beyond AWS 250MB limit, so I have to build DataFrames more manually for now.
   # rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", con,
   #                    params=(start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
-  result = main(assets, rets, allowShortSelling, R_f=r)
+  result = main(rets, allowShortSelling, R_f=r)
+  result["tickers"] = assets
 
   # Compress the response to enable larger payload
   content = gzip.compress(json.dumps(result).encode('utf8'), 5)
@@ -91,17 +95,14 @@ def markowitz_main():
 def seed_db():
   if app.debug == True:
     import yfinance as yf
-    risk_free_rate = yf.download("^IRX", progress=False,)[
-        'Adj Close'].tail(1)/100
-    risk_free_rate.to_sql(name='risk_free_rate',
-                          con=con, if_exists='replace')
+    # con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+    risk_free_rate = yf.download("^IRX", progress=False,)['Adj Close'].tail(1)/100
+    risk_free_rate.to_sql(name='risk_free_rate', con=con, if_exists='replace')
     price_history = download_symbols(pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
     returns_history = price_history.pct_change().dropna()
-    price_history.to_sql(name='price_history', con=con,
-                         if_exists='replace', chunksize=500)
+    price_history.to_sql(name='price_history', con=con, if_exists='replace', chunksize=500)
     # May need to adjust chunksize, or con timeout
-    returns_history.to_sql(name='returns_history',
-                           con=con, if_exists='replace', chunksize=500)
+    returns_history.to_sql(name='returns_history', con=con, if_exists='replace', chunksize=500)
 
     return jsonify({"message": "Database seeded successfully"})
   else:
@@ -119,7 +120,7 @@ def download_symbols(symbols: List[str]) -> pd.DataFrame:
     results = executor.map(lambda ticker: get_returns(ticker), symbols)
 
   # Create a DataFrame from the results
-  return pd.concat(list(results), axis=1, keys=symbols)
+  return pd.concat(list(results), axis=1, keys=[sym.replace('.', '_').replace('-', '_') for sym in symbols])
 
 
 # @cache

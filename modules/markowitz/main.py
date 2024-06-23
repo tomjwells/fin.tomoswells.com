@@ -47,8 +47,8 @@ def calculate_portfolio(R_p, S, q, G, h, A):
   return solvers.qp(S, q, G, h, A, matrix([R_p, 1.0]))['x']
 
 
-def efficient_frontier_numerical(mu, Sigma, symbols, R_p_linspace):
-  N = len(symbols)  # The number of assets in a portfolio
+def efficient_frontier_numerical(mu, Sigma, R_p_linspace):
+  N = len(mu)  # The number of assets in a portfolio
 
   # Quadratic term
   S = matrix(Sigma.values)
@@ -124,7 +124,11 @@ def find_tangency_portfolio(mu, Sigma, R_f, allow_short_selling=False):
   }
 
 
-def main(symbols: List[str], rets, allowShortSelling: bool, R_f: float):
+def main(rets, allowShortSelling: bool, R_f: float):
+
+  # Verify all columns contain numbers, if not we discard the column
+  # This can happen if a ticker started trading after the date range
+  rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1)
 
   # Notation: rets are daily, mu and Sigma are annualized
   print(rets.head())
@@ -142,18 +146,18 @@ def main(symbols: List[str], rets, allowShortSelling: bool, R_f: float):
     min = np.min(mu)
     R_p_linspace = np.linspace(min, max, num=300)
     weights, sigma_p = efficient_frontier_numerical(
-        mu, Sigma, symbols, R_p_linspace)
+        mu, Sigma, R_p_linspace)
 
   tangency_portfolio = find_tangency_portfolio(
       mu, Sigma, R_f, allow_short_selling=allowShortSelling)
 
+  print(weights)
   return {
-      "tickers": symbols,
       "mu": mu.tolist(),
       "Sigma": np.around(Sigma.values, 6).tolist(),
       "Sigma_inverse": np.around(np.linalg.inv(Sigma), 6).tolist(),
       "data": [{"return": round(R_p_linspace[i], 4), "risk": round(sigma_p[i], 4), "weights": np.around(weights[i], 4).tolist()} for i in range(len(R_p_linspace))],
-      "asset_datapoints": [{"ticker": ticker, "return": round(mu[i], 4), "risk": round(np.sqrt(Sigma.values[i][i]), 4)} for i, ticker in enumerate(symbols)],
-      "returns": [[round(val, 6) for val in rets[ticker].fillna(0).tolist()] for ticker in symbols],
+      "asset_datapoints": [{"ticker": rets.columns[i], "return": round(mu[i], 4), "risk": round(np.sqrt(Sigma.values[i][i]), 4)} for i in range(rets.shape[1])],
+      "returns": [[round(val, 6) for val in rets[ticker].fillna(0).tolist()] for ticker in rets.columns],
       "tangency_portfolio": tangency_portfolio
   }
