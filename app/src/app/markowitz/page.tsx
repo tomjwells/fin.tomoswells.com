@@ -37,7 +37,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
-    params.append('allowShortSelling', `${true}`)
+    params.append('allowShortSelling', `${false}`)
     redirect(`?${params.toString()}`)
   }
   const pageParams = parsedParams.data
@@ -187,7 +187,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
         <Card
           className='!p-4'
           style={{
-            background: 'linear-gradient(hsl(260deg 4.23% 9.0%), transparent)',
+            background: 'linear-gradient(145deg, hsl(260deg 4.23% 8.0%), hsl(260deg 4.23% 3.5%))',
           }}
         >
           <Box height='600px' width='9' p='4'>
