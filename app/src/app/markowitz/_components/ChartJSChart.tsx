@@ -17,7 +17,17 @@ type TangencyPortfolio = {
   risk: number
 }
 
-export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio, allowShortSelling }: { mptData: MPTData; riskFreeRate: number; tangencyPortfolio: TangencyPortfolio; allowShortSelling: boolean }) {
+export default function ChartJSChart({
+  mptData,
+  riskFreeRate,
+  tangencyPortfolio,
+  allowShortSelling,
+}: {
+  mptData: MPTData
+  riskFreeRate: number
+  tangencyPortfolio: TangencyPortfolio
+  allowShortSelling: boolean
+}) {
   const data = mptData.efficient_frontier
   const slope = (tangencyPortfolio.return - riskFreeRate) / (tangencyPortfolio.risk - 0)
   console.log({ tangency_portfolio: tangencyPortfolio })
@@ -241,7 +251,9 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio,
 
       {
         label: 'Efficient frontier',
-        data: data.filter((d) => d.return >= minRiskDataPoint.return).map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
+        data: data
+          .filter((d) => d.return >= minRiskDataPoint.return)
+          .map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
         borderColor: 'white',
         backgroundColor: 'transparent',
         pointBackgroundColor: 'white',
@@ -258,7 +270,9 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio,
       {
         label: 'Inefficient frontier',
         hidden: !allowShortSelling,
-        data: data.filter((d) => d.return <= minRiskDataPoint.return).map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
+        data: data
+          .filter((d) => d.return <= minRiskDataPoint.return)
+          .map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
         borderColor: 'white',
         backgroundColor: 'transparent',
         pointBackgroundColor: 'white',
@@ -306,15 +320,17 @@ export default function ChartJSChart({ mptData, riskFreeRate, tangencyPortfolio,
 
       for (let x = 0; x < chart.config._config.data.datasets.length; x++) {
         const dataset = chart.config._config.data.datasets[x]
-        const textWidth = ctx.measureText(dataset.data[0].status).width
-        for (let i = 0; i < dataset.data.length; i++) {
-          if (chart.config.data.datasets[x].data[i].status) {
-            const meta = chart.getDatasetMeta(x)
+        if (dataset.data.length > 0) {
+          const textWidth = ctx.measureText(dataset.data[0].status).width
+          for (let i = 0; i < dataset.data.length; i++) {
+            if (chart.config.data.datasets[x].data[i].status) {
+              const meta = chart.getDatasetMeta(x)
 
-            // Set the fillStyle to the color of the current datapoint
-            ctx.fillStyle = dataset.pointBackgroundColor
+              // Set the fillStyle to the color of the current datapoint
+              ctx.fillStyle = dataset.pointBackgroundColor
 
-            ctx.fillText(chart.config.data.datasets[x].data[i].status, meta.data[i].x - textWidth / 2, meta.data[i].y + 25)
+              ctx.fillText(chart.config.data.datasets[x].data[i].status, meta.data[i].x - textWidth / 2, meta.data[i].y + 25)
+            }
           }
         }
       }

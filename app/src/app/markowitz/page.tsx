@@ -8,13 +8,12 @@ import z from 'zod'
 import ChartJSChart from './_components/ChartJSChart'
 import AdvancedControls from './_components/AdvancedControls'
 import NextLink from 'next/link'
-import { Vector, Matrix } from 'ts-matrix'
 import AllowShortSelling from './_components/AllowShortSellingSwitch'
 import { fetchAssets, fetchRiskFreeRate } from '~/sqlite'
 import TangencyPortfolioPieChart from './_components/TangencyPortfolioPieChart'
 
 const pageParamsSchema = z.object({
-  assets: z.array(z.string()),
+  assets: z.array(z.string()).optional().default([]),
   r: z.coerce
     .number()
     .min(0)
@@ -47,13 +46,13 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
       <Flex direction='column' gap='2' mb='4'>
         <Heading size='6'>Modern Portfolio Theory</Heading>
         <Text size='1'>
-          A derivation of the formulae used in this implementation of Markowtiz’s Modern Portfolio Theory (MPT) can be found{' '}
+          A derivation of the formulae used for this implementation of Markowtiz’s Modern Portfolio Theory (MPT) can be found{' '}
           <Link asChild>
             <NextLink target='_blank' href={`https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf`}>
               here
             </NextLink>
           </Link>
-          . The Python code for the implementation is available{' '}
+          . The code (Python) for the implementation is available{' '}
           <Link asChild>
             <NextLink target='_blank' href={`https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py`}>
               here
@@ -135,23 +134,38 @@ const MPTSchema = z.object({
 export type MPTData = z.infer<typeof MPTSchema>
 
 async function fetchMPT(pageParams: PageParams) {
-  const queryParams = new URLSearchParams()
-  pageParams.assets.forEach((asset) => queryParams.append('assets', asset))
-  queryParams.append('startYear', pageParams.startYear.toString())
-  queryParams.append('endYear', pageParams.endYear.toString())
-  queryParams.append('r', pageParams.r.toString())
-  queryParams.append('allowShortSelling', pageParams.allowShortSelling.toString())
+  if (pageParams.assets.length >= 2) {
+    const queryParams = new URLSearchParams()
+    pageParams.assets.forEach((asset) => queryParams.append('assets', asset))
+    queryParams.append('startYear', pageParams.startYear.toString())
+    queryParams.append('endYear', pageParams.endYear.toString())
+    queryParams.append('r', pageParams.r.toString())
+    queryParams.append('allowShortSelling', pageParams.allowShortSelling.toString())
 
-  // Custom timeout to allow fetch to wait longer
-  AbortSignal.timeout ??= function timeout(ms) {
-    const ctrl = new AbortController()
-    setTimeout(() => ctrl.abort(), ms)
-    return ctrl.signal
+    // Custom timeout to allow fetch to wait longer
+    AbortSignal.timeout ??= function timeout(ms) {
+      const ctrl = new AbortController()
+      setTimeout(() => ctrl.abort(), ms)
+      return ctrl.signal
+    }
+
+    console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
+    const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { cache: 'no-cache', signal: AbortSignal.timeout(60_000) })
+    return MPTSchema.parse(await response.json())
+  } else {
+    return {
+      tickers: [],
+      efficient_frontier: [],
+      asset_datapoints: [],
+      returns: [],
+      tangency_portfolio: {
+        weights: [],
+        return: 0,
+        risk: 0,
+      },
+      sortino_variance: 0,
+    }
   }
-
-  console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
-  const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { cache: 'no-cache', signal: AbortSignal.timeout(60_000) })
-  return MPTSchema.parse(await response.json())
 }
 
 async function ResultsSection({ pageParams, searchParams }: { pageParams: PageParams; searchParams?: Record<string, string | string[] | undefined> }) {
@@ -160,6 +174,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
 
     return (
       <Flex direction='column' gap='6'>
+        {data.tickers.length < 2 && <Flex justify='center'>Enter two or more ticker symbols to see the efficient frontier.</Flex>}
         <Card
           className='!p-4'
           style={{
@@ -172,41 +187,45 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
             </Suspense>
           </Box>
         </Card>
-        <div className='flex flex-col gap-4'>
-          <Heading size='5'>Metrics</Heading>
-          <div className='flex gap-4'>
-            <div className='w-1/2'>
-              <Heading size='4' color='gray'>
-                Expected Return
-              </Heading>
-              <Heading size='6'>{formatPercent(data.tangency_portfolio.return)}</Heading>
+        {data.tickers.length >= 2 && (
+          <>
+            <div className='flex flex-col gap-4'>
+              <Heading size='5'>Metrics</Heading>
+              <div className='flex gap-4'>
+                <div className='w-1/2'>
+                  <Heading size='4' color='gray'>
+                    Expected Return
+                  </Heading>
+                  <Heading size='6'>{formatPercent(data.tangency_portfolio.return)}</Heading>
+                </div>
+                <div className='w-1/2'>
+                  <Heading size='4' color='gray'>
+                    Volatility
+                  </Heading>
+                  <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
+                </div>
+              </div>
+              <div className='flex gap-4'>
+                <div className='w-1/2'>
+                  <Heading size='4' color='gray'>
+                    Sharpe Ratio
+                  </Heading>
+                  <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / (data.tangency_portfolio.risk - 0)).toFixed(2)}</Heading>
+                </div>
+                <div className='w-1/2'>
+                  <Heading size='4' color='gray'>
+                    Sortino Ratio
+                  </Heading>
+                  <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
+                </div>
+              </div>
             </div>
-            <div className='w-1/2'>
-              <Heading size='4' color='gray'>
-                Volatility
-              </Heading>
-              <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
-            </div>
-          </div>
-          <div className='flex gap-4'>
-            <div className='w-1/2'>
-              <Heading size='4' color='gray'>
-                Sharpe Ratio
-              </Heading>
-              <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / (data.tangency_portfolio.risk - 0)).toFixed(2)}</Heading>
-            </div>
-            <div className='w-1/2'>
-              <Heading size='4' color='gray'>
-                Sortino Ratio
-              </Heading>
-              <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
-            </div>
-          </div>
-        </div>
-        <Suspense>
-          <Heading size='4'>The Tangency Portfolio</Heading>
-          <TangencyPortfolioPieChart mptData={data} />
-        </Suspense>
+            <Suspense>
+              <Heading size='4'>The Tangency Portfolio</Heading>
+              <TangencyPortfolioPieChart mptData={data} />
+            </Suspense>
+          </>
+        )}
       </Flex>
     )
   } catch (error) {

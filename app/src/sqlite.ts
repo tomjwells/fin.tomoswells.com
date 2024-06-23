@@ -1,17 +1,17 @@
 import { createClient } from '@libsql/client/web'
 import { env } from './env'
 
-if (!process.env.TURSO_DATABASE_URL) {
+if (!env.TURSO_DATABASE_URL) {
   throw new Error('TURSO_DATABASE_URL is not set')
 }
 
-if (!process.env.TURSO_AUTH_TOKEN) {
+if (!env.TURSO_AUTH_TOKEN) {
   throw new Error('TURSO_AUTH_TOKEN is not set')
 }
 
 export const db = createClient({
-  url: process.env.TURSO_DATABASE_URL,
-  authToken: process.env.TURSO_AUTH_TOKEN,
+  url: env.TURSO_DATABASE_URL,
+  authToken: env.TURSO_AUTH_TOKEN,
   fetch: (url: string, options: any) => fetch(url, { ...options, next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 } }),
 })
 

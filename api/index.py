@@ -14,40 +14,40 @@ import json
 import gzip
 import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-# from sqlalchemy import create_engine
+from sqlalchemy import create_engine
 import libsql_experimental as libsql
 # import libsql_client as libsql
 
 
-# import redis
-# import functools
-# import pickle
+import redis
+import functools
+import pickle
 
-# r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
+r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
 
 
-# def cache(func):
-#   @functools.wraps(func)
-#   def wrapper(*args, **kwargs):
-#     key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-#     if (val := r.get(key)) is not None:
-#       print("Cache hit!")
-#       return pickle.loads(val)
-#     else:
-#       print("Cache miss!")
-#       val = func(*args, **kwargs)
-#       r.set(key, pickle.dumps(val))
-#       return val
-#   return wrapper
+def cache(func):
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+    if (val := r.get(key)) is not None:
+      print("Cache hit!")
+      return pickle.loads(val)
+    else:
+      print("Cache miss!")
+      val = func(*args, **kwargs)
+      r.set(key, pickle.dumps(val))
+      return val
+  return wrapper
 
 
 app = Flask(__name__)
 
 # con = libsql.create_client_sync(f"{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}")
 # con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-# con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
+con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
 
@@ -94,6 +94,7 @@ def seed_db():
     risk_free_rate.to_sql(name='risk_free_rate', con=con, if_exists='replace')
     price_history = download_symbols(pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
     returns_history = price_history.pct_change().dropna()
+    print(price_history.columns)
     price_history.to_sql(name='price_history', con=con, if_exists='replace', chunksize=500)
     # May need to adjust chunksize, or con timeout
     returns_history.to_sql(name='returns_history', con=con, if_exists='replace', chunksize=500)
@@ -103,21 +104,33 @@ def seed_db():
     return jsonify({"error": "Cannot seed database in production"}), 400
 
 
-# @cache
+def get_market_cap(symbol):
+  import yfinance as yf
+  return symbol, yf.Ticker(symbol.replace('.', '-')).info.get('marketCap')
+
+
 def download_symbols(symbols: List[str]) -> pd.DataFrame:
-  """
-    Downloads the adjusted close prices for the tickers in parallel
-  """
-
-  # Download data in parallel
+  # Fetch market caps in parallel
   with ThreadPoolExecutor() as executor:
-    results = executor.map(lambda ticker: get_returns(ticker), symbols)
+    market_caps = list(executor.map(get_market_cap, symbols))
 
-  # Create a DataFrame from the results
-  return pd.concat(list(results), axis=1, keys=[sym.replace('.', '_').replace('-', '_') for sym in symbols])
+  # Sort symbols by market cap, descending order
+
+  print(market_caps)
+  sorted_ticker_market_caps = sorted(market_caps, key=lambda x: x[1], reverse=True)
+  sorted_symbols = [ticker for ticker, _ in sorted_ticker_market_caps]
+
+  # Download data in parallel for sorted symbols
+  with ThreadPoolExecutor() as executor:
+    results = executor.map(lambda ticker: get_returns(ticker), sorted_symbols)
+
+  # Create a DataFrame from the results, with symbols as columns
+  df = pd.concat(list(results), axis=1)
+  df.columns = [sym.replace('.', '_').replace('-', '_') for sym in sorted_symbols]
+  return df
 
 
-# @cache
+@cache
 def get_returns(ticker: str) -> pd.Series:
   # yfinance.download frequently errors, this wrapper makes downloading reliable
   for _ in range(int(1e5)):
@@ -134,7 +147,7 @@ def get_returns(ticker: str) -> pd.Series:
       time.sleep(2)
 
 
-# @cache
+@cache
 def download_data(ticker: str) -> pd.Series:
   """
     Downloads the adjusted close prices for a given ticker and calculates the daily returns
