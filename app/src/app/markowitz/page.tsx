@@ -31,9 +31,10 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   const parsedParams = pageParamsSchema.safeParse(searchParams)
   if (!parsedParams.success) {
     const params = new URLSearchParams()
-    const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BRK']
-    defaultAssets.forEach((asset) => params.append('assets', asset))
-    params.append('r', `${await fetchRiskFreeRate}`)
+    // const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BRK']
+    const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
+    getRandomElements(assets, 100).forEach((asset) => params.append('assets', asset))
+    params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
     params.append('allowShortSelling', `${true}`)
@@ -247,4 +248,13 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
       </Flex>
     )
   }
+}
+
+function getRandomElements(arr: string[], count: number): string[] {
+  let result: Set<string> = new Set()
+  while (result.size < count && result.size < arr.length) {
+    let randomIndex = Math.floor(Math.random() * arr.length)
+    result.add(arr[randomIndex])
+  }
+  return Array.from(result)
 }
