@@ -254,7 +254,7 @@ function getRandomElements(arr: string[], count: number): string[] {
   let result: Set<string> = new Set()
   while (result.size < count && result.size < arr.length) {
     let randomIndex = Math.floor(Math.random() * arr.length)
-    result.add(arr[randomIndex] || '')
+    result.add(arr[randomIndex])
   }
   return Array.from(result)
 }
