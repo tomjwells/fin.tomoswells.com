@@ -17,12 +17,12 @@ export default function HomePage() {
         <ul className='list-disc my-3 ml-6'>
           <li>
             <Link asChild>
-              <NextLink href='/derivatives'>Options Pricing</NextLink>
+              <NextLink href='/markowitz'>Modern Portfolio Theory</NextLink>
             </Link>
           </li>
           <li>
             <Link asChild>
-              <NextLink href='/markowitz'>Modern Portfolio Theory</NextLink>
+              <NextLink href='/derivatives'>Options Pricing</NextLink>
             </Link>
           </li>
           {env.NODE_ENV === 'development' && (

@@ -30,7 +30,6 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   const parsedParams = pageParamsSchema.safeParse(searchParams)
   if (!parsedParams.success) {
     const params = new URLSearchParams()
-    // const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BRK']
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
     getRandomElements(assets, 50).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
@@ -83,7 +82,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <Flex direction='column' gap='2' className='my-4'>
           <div>
             <Heading size='3'>Risk free rate</Heading>
-            <Text size='2'>The risk free rate is set by default to the yield of the three-month U.S. Treasury bill, but it can be changed to any other value.</Text>
+            <Text size='2'>The risk free rate is used to calculate the tangency portfolio. The current yield of the three-month U.S. Treasury bill is {await fetchRiskFreeRate}.</Text>
           </div>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
@@ -131,7 +130,6 @@ const MPTSchema = z.object({
       risk: z.number(),
     })
   ),
-  returns: z.array(z.array(z.number())),
   tangency_portfolio: z.object({
     weights: z.array(z.number()),
     return: z.number(),
@@ -165,7 +163,6 @@ async function fetchMPT(pageParams: PageParams) {
       tickers: [],
       efficient_frontier: [],
       asset_datapoints: [],
-      returns: [],
       tangency_portfolio: {
         weights: [],
         return: 0,

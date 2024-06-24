@@ -59,11 +59,11 @@ function Nav() {
             <TabsTrigger value='/' className='w-full sm:w-auto'>
               <HomeIcon />
             </TabsTrigger>
-            <TabsTrigger value='/derivatives' className='w-full sm:w-auto'>
-              Options Pricing
-            </TabsTrigger>
             <TabsTrigger value='/markowitz' className='w-full sm:w-auto'>
               Modern Portfolio Theory
+            </TabsTrigger>
+            <TabsTrigger value='/derivatives' className='w-full sm:w-auto'>
+              Options Pricing
             </TabsTrigger>
             {env.NODE_ENV === 'development' && (
               <TabsTrigger value='/timeseries' className='w-full sm:w-auto'>
