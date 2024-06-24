@@ -97,7 +97,8 @@ def find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=False
     # Analytic solution
     ones = np.ones(N)
     subtracted = mu - R_f * ones
-    tangency_weights = inv_Sigma @ subtracted / (ones.T @ inv_Sigma @ subtracted)
+    inv_Sigma_at_subtracted = inv_Sigma @ subtracted
+    tangency_weights = inv_Sigma_at_subtracted / (ones.T @ inv_Sigma_at_subtracted)
   else:
     # See https://bookdown.org/compfinezbook/introcompfinr/Quadradic-programming.html#no-short-sales-tangency-portfolio for the mathematical formulation
     # Quadratic term
@@ -129,30 +130,30 @@ def find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=False
 def main(rets, allowShortSelling: bool, R_f: float):
 
   # Verify all columns contain numbers, if not we discard the column
-  # This can happen if a ticker started trading after the date range
+  # This can happen if a ticker began trading after the date range
   rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1)
 
   # Notation: rets are daily, mu and Sigma are annualized
-  print(rets.head())
+  if os.environ.get("DEBUG"):
+    print(rets.head())
   mu = 252 * rets.mean().values
   Sigma = 252 * rets.cov().values
   inv_Sigma = np.linalg.inv(Sigma)
 
   # Calculate the efficient frontier
   if allowShortSelling:
-    max = 2
-    min = -2
-    R_p_linspace = np.linspace(min, max, num=200)
+    max = 1
+    min = -0.2
+    R_p_linspace = np.linspace(min, max, num=60)
     weights, sigma_p = efficient_frontier(mu, inv_Sigma, R_p_linspace)
   else:
     max = np.max(mu)
     min = np.min(mu)
-    R_p_linspace = np.linspace(min, max, num=100)
+    R_p_linspace = np.linspace(min, max, num=60)
     weights, sigma_p = efficient_frontier_numerical(mu, Sigma, R_p_linspace)
 
   tangency_portfolio = find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=allowShortSelling)
 
-  print(weights)
   return {
       "tickers": rets.columns.tolist(),
       "efficient_frontier": [{"return": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i].tolist()} for i in range(len(R_p_linspace))],

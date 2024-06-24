@@ -82,7 +82,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <Flex direction='column' gap='2' className='my-4'>
           <div>
             <Heading size='3'>Risk free rate</Heading>
-            <Text size='2'>The risk free rate is used to calculate the tangency portfolio. The current yield of the three-month U.S. Treasury bill is {await fetchRiskFreeRate}.</Text>
+            <Text size='2'>The risk free rate is used to calculate the tangency portfolio. The current yield of the three-month U.S. Treasury bill is {(100*(await fetchRiskFreeRate)).toFixed(2)}%.</Text>
           </div>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
