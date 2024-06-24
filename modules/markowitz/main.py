@@ -9,6 +9,8 @@ import numpy.typing as npt
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from functools import partial
 
+solvers.options['show_progress'] = True if os.environ.get("DEBUG") else False
+
 
 def efficient_frontier(mu: npt.NDArray[np.floating[Any]], inv_Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[np.floating[Any], np.floating[Any]]:
   ones = np.ones(len(mu))

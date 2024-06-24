@@ -25,7 +25,10 @@ export default function AdvancedControls({ pageParams }: { pageParams: PageParam
   const [isPending, startTransition] = useTransition()
   const [timer, setTimer] = useState<NodeJS.Timeout | null>(null)
 
-  React.useEffect(() => handleYearChange(sliderRange[0] ? getYearValue(sliderRange[0]) : pageParams.startYear, sliderRange[1] ? getYearValue(sliderRange[1]) : pageParams.endYear), [sliderRange])
+  React.useEffect(
+    () => handleYearChange(sliderRange[0] !== undefined ? getYearValue(sliderRange[0]) : pageParams.startYear, sliderRange[1] !== undefined ? getYearValue(sliderRange[1]) : pageParams.endYear),
+    [sliderRange]
+  )
 
   function handleYearChange(startYear: number, endYear: number) {
     if (timer) clearTimeout(timer)
