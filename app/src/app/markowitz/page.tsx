@@ -6,7 +6,7 @@ import { env } from '~/env'
 import RiskFreeRateSlider from './_components/RiskFreeRateSlider'
 import z from 'zod'
 import ChartJSChart from './_components/ChartJSChart'
-import AdvancedControls from './_components/AdvancedControls'
+import DateRangeSlider from './_components/DateRangeSlider'
 import NextLink from 'next/link'
 import AllowShortSelling from './_components/AllowShortSellingSwitch'
 import { fetchAssets, fetchRiskFreeRate } from '~/sqlite'
@@ -32,7 +32,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
     const params = new URLSearchParams()
     // const defaultAssets = ['META', 'AAPL', 'TSLA', 'MSFT', 'NFLX', 'PYPL', 'ABNB', 'GOOG', 'BRK']
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
-    getRandomElements(assets, 80).forEach((asset) => params.append('assets', asset))
+    getRandomElements(assets, 50).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
@@ -80,15 +80,23 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
           </Suspense>
         </div>
 
-        <div className='my-4'>
-          <Heading size='3'>Risk free rate</Heading>
-          <Text size='2'>The risk free rate is set by default to the yield of the three-month U.S. Treasury bill, but it can be changed to any other value.</Text>
+        <Flex direction='column' gap='2' className='my-4'>
+          <div>
+            <Heading size='3'>Risk free rate</Heading>
+            <Text size='2'>The risk free rate is set by default to the yield of the three-month U.S. Treasury bill, but it can be changed to any other value.</Text>
+          </div>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
           </Suspense>
-        </div>
+        </Flex>
 
-        <AdvancedControls pageParams={pageParams} />
+        <Flex direction='column' gap='2' className='my-4'>
+          <div>
+            <Heading size='3'>Date Range</Heading>
+            <Text size='2'>Asset statistics are calculated based on price action during a date range. Use the slider to adjust the date range used for the calculation.</Text>
+          </div>
+          <DateRangeSlider pageParams={pageParams} />
+        </Flex>
 
         <Heading size='5' mt='4'>
           Results
