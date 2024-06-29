@@ -1,5 +1,6 @@
 import { createClient } from '@libsql/client/web'
 import { env } from './env'
+import yahooFinance from 'yahoo-finance2'
 
 if (!env.TURSO_DATABASE_URL) {
   throw new Error('TURSO_DATABASE_URL is not set')
@@ -31,15 +32,5 @@ export const fetchUnderlyingPrice = (ticker: string) => {
   if (!/^[a-zA-Z0-9_]+$/.test(ticker)) throw new Error('Invalid ticker')
   // DB price will be slightly outdated, so use an API instead
   // return db.execute(`SELECT ${ticker} FROM price_history ORDER BY Date DESC LIMIT 1`).then(({ rows }) => rows[0]?.[ticker] as number)
-  return fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker.replace('_', '-')}?range=5m&interval=5m`, {
-    next: {
-      revalidate: 3600, // 1 hour
-    },
-  })
-    .then((res) => res.json())
-    .then((data) => data.chart.result[0].meta.regularMarketPrice as number)
-    .catch((err) => {
-      console.error(err)
-      return 0
-    })
+  return yahooFinance.quote(ticker.replace('_', '-')).then((data) => data.regularMarketPrice)
 }

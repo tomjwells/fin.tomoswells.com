@@ -69,6 +69,7 @@ def markowitz_main():
   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
   # Python's isidentifier is used to prevent SQL injection
   # Surpisingly, the sql query takes ~ 2/3 of the request duration for 50 assets (twice as long as the actual MPT calculation)
+  # Storing the table on disk as a .feather file reduces this, however it increases the lambda function size beyond 250MB, so keep with SQLite for now
   query = f"SELECT {', '.join([f'`{col.replace('_', '.')}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
   rets = pd.DataFrame(
       con.execute(query, (start_date, end_date)).fetchall(),
@@ -209,3 +210,11 @@ def get_option_price():
       return jsonify(monte_carlo(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported"})
+
+# @app.route("/api/get_asset_price")
+# def get_asset_price():
+#   ticker = request.args.get('ticker')
+#   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+#   results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
+#   price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+#   return jsonify(price_history.to_dict())
