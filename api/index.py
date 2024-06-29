@@ -15,7 +15,7 @@ import gzip
 import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 # from sqlalchemy import create_engine
-import libsql_experimental as libsql
+# import libsql_experimental as libsql
 # import libsql_client as libsql
 
 
@@ -76,14 +76,14 @@ def markowitz_main():
   columns = ['Date'] + assets
   # feather is fastest
   match source:
-    case 'sqlite':
-      con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-      query = f"SELECT {', '.join([f'`{col}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
-      rets = pd.DataFrame(
-          con.execute(query, (start_date, end_date)).fetchall(),
-          columns=columns
-      ).set_index('Date').iloc[1:]
-      rets = pd.read_csv('rets.csv',  index_col='Date', parse_dates=["Date"], usecols=columns).loc[start_date:end_date]
+    # case 'sqlite':
+    #   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+    #   query = f"SELECT {', '.join([f'`{col}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
+    #   rets = pd.DataFrame(
+    #       con.execute(query, (start_date, end_date)).fetchall(),
+    #       columns=columns
+    #   ).set_index('Date').iloc[1:]
+    #   rets = pd.read_csv('rets.csv',  index_col='Date', parse_dates=["Date"], usecols=columns).loc[start_date:end_date]
     case 'feather':
       rets = pd.read_feather('rets.feather', columns=columns).loc[start_date:end_date]
       rets.index = pd.to_datetime(rets.index)
@@ -222,10 +222,10 @@ def get_option_price():
 
   source = 'sqlite'
   match source:
-    case 'sqlite':
-      con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-      results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
-      price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+    # case 'sqlite':
+    #   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+    #   results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
+    #   price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
     case 'feather':
       price_history = pd.read_feather('price_history.feather', columns=['Date', ticker])
       price_history.index = pd.to_datetime(price_history.index)
