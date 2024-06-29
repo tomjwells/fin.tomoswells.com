@@ -1,19 +1,16 @@
+import os
+import time
+import random
 import numpy as np
-from typing import Literal
+from flask import Flask, request, jsonify
 from datetime import datetime
 from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.binomial_model import EUPrice, USPrice
 from modules.markowitz.main import main
-from flask import Flask, request, jsonify, make_response
 import pandas as pd
-from typing import List
-import random
-import time
-import json
-import gzip
-import os
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from typing import List, Literal
+from concurrent.futures import ThreadPoolExecutor
 # from sqlalchemy import create_engine
 import libsql_experimental as libsql
 # import libsql_client as libsql
@@ -28,19 +25,19 @@ import libsql_experimental as libsql
 # Decorator to cache the result of a function using Redis
 
 
-def cache(func):
-  @functools.wraps(func)
-  def wrapper(*args, **kwargs):
-    key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-    if (val := r.get(key)) is not None:
-      print("Cache hit!")
-      return pickle.loads(val)
-    else:
-      print("Cache miss!")
-      val = func(*args, **kwargs)
-      r.set(key, pickle.dumps(val))
-      return val
-  return wrapper
+# def cache(func):
+#   @functools.wraps(func)
+#   def wrapper(*args, **kwargs):
+#     key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+#     if (val := r.get(key)) is not None:
+#       print("Cache hit!")
+#       return pickle.loads(val)
+#     else:
+#       print("Cache miss!")
+#       val = func(*args, **kwargs)
+#       r.set(key, pickle.dumps(val))
+#       return val
+#   return wrapper
 
 
 app = Flask(__name__)
@@ -162,14 +159,11 @@ def download_data(ticker: str) -> pd.Series:
 @app.route("/api/derivatives/option-price")
 def get_option_price():
   option_type = request.args.get('optionType')
-  assert option_type in [
-      'european', 'american'], "option_type should be either 'european' or 'american'"
+  assert option_type in ['european', 'american'], "option_type should be either 'european' or 'american'"
   method = request.args.get('method')
-  assert method in ['binomial', 'black-scholes',
-                    'monte-carlo'], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
+  assert method in ['binomial', 'black-scholes', 'monte-carlo'], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
   instrument: Literal['call', 'put'] = request.args.get('instrument')
-  assert instrument in [
-      'call', 'put'], "instrument should be either 'call' or 'put'"
+  assert instrument in ['call', 'put'], "instrument should be either 'call' or 'put'"
 
   t: datetime = datetime.now()
   T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')

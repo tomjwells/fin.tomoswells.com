@@ -31,7 +31,7 @@ export const fetchUnderlyingPrice = (ticker: string) => {
   if (!/^[a-zA-Z0-9_]+$/.test(ticker)) throw new Error('Invalid ticker')
   // DB price will be slightly outdated, so use an API instead
   // return db.execute(`SELECT ${ticker} FROM price_history ORDER BY Date DESC LIMIT 1`).then(({ rows }) => rows[0]?.[ticker] as number)
-  return fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker.replace('_', '-')}?range=1d&interval=5m`)
+  return fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker.replace('_', '-')}?range=5m&interval=5m`)
     .then((res) => res.json())
     .then((data) => data.chart.result[0].meta.regularMarketPrice as number)
 }
