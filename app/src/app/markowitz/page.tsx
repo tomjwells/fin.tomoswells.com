@@ -208,7 +208,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
                   <Heading size='6'>{formatPercent(data.tangency_portfolio.return)}</Heading>
                 </div>
                 <div className='w-1/2'>
-    730              <Heading size='4' color='gray'>
+                  <Heading size='4' color='gray'>
                     Volatility
                   </Heading>
                   <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
