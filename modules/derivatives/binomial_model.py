@@ -1,12 +1,19 @@
 import numpy as np
 from typing import Literal
 
+
 def call_payoff(S: float, K: float) -> float:
   return max(S - K, 0)
+
+
 def put_payoff(S: float, K: float) -> float:
   return max(K - S, 0)
 
-def EUPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
+
+type OptionType = Literal['call', 'put']
+
+
+def EUPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
   if instrument == "call":
     payoff = call_payoff
   elif instrument == "put":
@@ -35,17 +42,20 @@ def EUPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: floa
     V[j] = payoff(S[j], K)
   for n in range(NoSteps, 0, -1):
     V[:n] = (p * V[1:n+1] + (1 - p) * V[:n]) * discount_factor
+    # Non-vectorized version:
     # for j in range(n):
     #   V[j] = max((p * V[j + 1] + (1 - p) * V[j]) * discount_factor, payoff(S[j], K))
   return V[0]
 
-def USPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
+
+def USPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
   if instrument == "call":
     payoff = call_payoff
   elif instrument == "put":
     payoff = put_payoff
   else:
     raise ValueError("Invalid instrument. Choose either 'call' or 'put'")
+
   S = np.zeros((NoSteps + 1, NoSteps + 1))
   V = np.zeros((NoSteps + 1, NoSteps + 1))
   dt = tau / NoSteps
@@ -67,5 +77,4 @@ def USPrice(instrument: Literal["call","put"], S_0: float, sigma: float, r: floa
   for n in range(NoSteps, 0, -1):
     for j in range(n):
       V[j, n - 1] = max((p * V[j + 1, n] + (1 - p) * V[j, n]) * discount_factor, payoff(S[j, n - 1], K))
-  print(f"V: {V[0,0]}")
   return V[0, 0]

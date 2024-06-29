@@ -12,6 +12,44 @@ from functools import partial
 solvers.options['show_progress'] = True if os.environ.get("DEBUG") else False
 
 
+def main(rets, allowShortSelling: bool, R_f: float):
+
+  # Verify all columns contain numbers, if not we discard the column
+  # This can happen if a ticker began trading after the date range
+  rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1)
+
+  # Notation: rets are daily, mu and Sigma are annualized
+  if os.environ.get("DEBUG"):
+    print(rets.head())
+  # Use .values to cast to numpy arrays, which are faster to work with than DataFrames
+  mu = 252 * rets.mean().values
+  Sigma = 252 * rets.cov().values
+  inv_Sigma = np.linalg.inv(Sigma)
+
+  # Calculate the efficient frontier
+  if allowShortSelling:
+    max = 1
+    min = -0.2
+    R_p_linspace = np.linspace(min, max, num=60)
+    weights, sigma_p = efficient_frontier(mu, inv_Sigma, R_p_linspace)
+  else:
+    max = np.max(mu)
+    min = np.min(mu)
+    R_p_linspace = np.linspace(min, max, num=60)
+    weights, sigma_p = efficient_frontier_numerical(mu, Sigma, R_p_linspace)
+
+  tangency_portfolio = find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=allowShortSelling)
+  sortino_variance = calculate_sortino_variance(rets, tangency_portfolio['weights'], R_f)
+
+  return {
+      "tickers": rets.columns.tolist(),
+      "efficient_frontier": [{"return": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i].tolist()} for i in range(len(R_p_linspace))],
+      "asset_datapoints": [{"ticker": ticker, "return": ret, "risk": risk} for ticker, ret, risk in zip(rets.columns, mu, np.sqrt(np.diag(Sigma)))],
+      "tangency_portfolio": tangency_portfolio,
+      "sortino_variance": sortino_variance
+  }
+
+
 def efficient_frontier(mu: npt.NDArray[np.floating[Any]], inv_Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[np.floating[Any], np.floating[Any]]:
   ones = np.ones(len(mu))
   inv_Sigma_at_mu = inv_Sigma @ mu
@@ -33,12 +71,12 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]], inv_Sigma: np.ndarray[
 
 def calculate_sortino_variance(rets, weights, T):
   """
-    Calculate the Sortino variance of a portfolio. Calculated according to the definition in
+    Calculate the Sortino variance of a portfolio. Calculated using the definition in
     https://www.cmegroup.com/education/files/rr-sortino-a-sharper-ratio.pdf.
     The Sortino variance measures the downside volatility of a portfolio below a target return
       - rets: DataFrame of daily returns
       - weights: Portfolio weights
-      - T: Target return (assumed annualized)
+      - T: Target return (annualized)
   """
   # Calculate the portfolio's return (mean of portfolio returns)
   daily_portfolio_returns = (rets * weights).sum(axis=1)
@@ -74,11 +112,11 @@ def efficient_frontier_numerical(mu, Sigma, R_p_linspace):
   # Equality constraint
   A = matrix(np.vstack([mu, np.ones(N)]))
 
-  # Parallelize the quadratic optimization step over each of the R_p linspace
-  calculate_portfolio_partial = partial(calculate_portfolio, S=S, q=q, G=G, h=h, A=A)
+  # Parallelize the quadratic optimization step over the R_p linspace
   with ThreadPoolExecutor() as executor:
-    portfolios = list(executor.map(calculate_portfolio_partial, R_p_linspace))
-  # CALCULATE RISKS AND RETURNS FOR FRONTIER
+    portfolios = list(executor.map(partial(calculate_portfolio, S=S, q=q, G=G, h=h, A=A), R_p_linspace))
+
+  # Calculate the weights and risks of the portfolios
   weights = np.array(portfolios).squeeze()
   risks = np.sqrt(np.sum(weights * (weights @ S), axis=1))
 
@@ -126,40 +164,4 @@ def find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=False
       "return": mu @ tangency_weights,
       "risk": np.sqrt(tangency_weights.T @ Sigma @ tangency_weights),
       "weights": tangency_weights.tolist(),
-  }
-
-
-def main(rets, allowShortSelling: bool, R_f: float):
-
-  # Verify all columns contain numbers, if not we discard the column
-  # This can happen if a ticker began trading after the date range
-  rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1)
-
-  # Notation: rets are daily, mu and Sigma are annualized
-  if os.environ.get("DEBUG"):
-    print(rets.head())
-  mu = 252 * rets.mean().values
-  Sigma = 252 * rets.cov().values
-  inv_Sigma = np.linalg.inv(Sigma)
-
-  # Calculate the efficient frontier
-  if allowShortSelling:
-    max = 1
-    min = -0.2
-    R_p_linspace = np.linspace(min, max, num=60)
-    weights, sigma_p = efficient_frontier(mu, inv_Sigma, R_p_linspace)
-  else:
-    max = np.max(mu)
-    min = np.min(mu)
-    R_p_linspace = np.linspace(min, max, num=60)
-    weights, sigma_p = efficient_frontier_numerical(mu, Sigma, R_p_linspace)
-
-  tangency_portfolio = find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=allowShortSelling)
-
-  return {
-      "tickers": rets.columns.tolist(),
-      "efficient_frontier": [{"return": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i].tolist()} for i in range(len(R_p_linspace))],
-      "asset_datapoints": [{"ticker": ticker, "return": ret, "risk": risk} for ticker, ret, risk in zip(rets.columns, mu, np.sqrt(np.diag(Sigma)))],
-      "tangency_portfolio": tangency_portfolio,
-      "sortino_variance": calculate_sortino_variance(rets, tangency_portfolio['weights'], R_f)
   }

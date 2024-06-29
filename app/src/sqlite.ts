@@ -16,13 +16,13 @@ export const db = createClient({
 })
 
 // Utils
-
+730
 export const fetchRiskFreeRate = db.execute(`SELECT * FROM 'risk_free_rate'`).then(({ rows }) => (rows[rows.length - 1]?.['Adj Close'] ?? 0.05) as number)
 
 export const fetchAssets = db.execute(`PRAGMA table_info(price_history);`).then(({ rows }) =>
   rows
     .slice(1)
-    .map((row) => row.name)
+    .map((row) => row.name?.replace('_', '.'))
     .filter((name): name is string => name !== undefined)
 )
 

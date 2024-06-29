@@ -26,21 +26,22 @@ import libsql_experimental as libsql
 # r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
+# def cache(func):
+#   @functools.wraps(func)
+#   def wrapper(*args, **kwargs):
+#     key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+#     if (val := r.get(key)) is not None:
+#       print("Cache hit!")
+#       return pickle.loads(val)
+#     else:
+#       print("Cache miss!")
+#       val = func(*args, **kwargs)
+#       r.set(key, pickle.dumps(val))
+#       return val
+#   return wrapper
 
 
-def cache(func):
-  @functools.wraps(func)
-  def wrapper(*args, **kwargs):
-    key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-    if (val := r.get(key)) is not None:
-      print("Cache hit!")
-      return pickle.loads(val)
-    else:
-      print("Cache miss!")
-      val = func(*args, **kwargs)
-      r.set(key, pickle.dumps(val))
-      return val
-  return wrapper
+source = 'feather'
 
 
 app = Flask(__name__)
@@ -63,24 +64,59 @@ def markowitz_main():
   assert isinstance(assets, list), "assets should be a list"
   assert isinstance(startYear, int), "startYear should be a int"
   assert isinstance(endYear, int), "endYear should be a int"
-  assert isinstance(allowShortSelling,
-                    bool), "allowShortSelling should be a bool"
+  assert isinstance(allowShortSelling, bool), "allowShortSelling should be a bool"
 
   start_date = f'{startYear}-01-01'
-  end_date = datetime.now().strftime(
-      '%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
+  end_date = datetime.now().strftime('%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
+
+  import time
+  # Start timing
+  start_time_db = time.time()
 
   columns = ['Date'] + assets
-  columns_str = ', '.join([f'`{col}`' for col in columns if col.isidentifier()])
-  con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-  print(f"SELECT {columns_str} FROM price_history WHERE date BETWEEN ? AND ?")
-  results = con.execute(f"SELECT {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
-  print(results[0:5], results[-6:-1])
-  rets = pd.DataFrame(results, columns=columns).set_index('Date').pct_change().iloc[1:]
-  # SQLAlchemy takes the function size beyond AWS 250MB limit, so I have to build DataFrames more manually for now.
-  # rets = pd.read_sql(f"SELECT Date, {columns_str} FROM price_history WHERE date BETWEEN ? AND ?", con,
-  #                    params=(start_date, end_date), index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
+  # feather is fastest
+  match source:
+    case 'sqlite':
+      con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+      query = f"SELECT {', '.join([f'`{col}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
+      rets = pd.DataFrame(
+          con.execute(query, (start_date, end_date)).fetchall(),
+          columns=columns
+      ).set_index('Date').iloc[1:]
+      rets = pd.read_csv('rets.csv',  index_col='Date', parse_dates=["Date"], usecols=columns).loc[start_date:end_date]
+    case 'feather':
+      rets = pd.read_feather('rets.feather', columns=columns).loc[start_date:end_date]
+      rets.index = pd.to_datetime(rets.index)
+    case 'parquet':
+      rets = pd.read_parquet('rets.parquet', columns=columns).loc[start_date:end_date]
+      rets.index = pd.to_datetime(rets.index)
+  # .set_index('Date')
+  print(rets)
+  # End timing
+  end_time_db = time.time()
+
+  # Calculate elapsed time for DB query and calculation of rets
+  elapsed_time_db = end_time_db - start_time_db
+
+  # Start timing
+  start_time_main = time.time()
+
   result = main(rets, allowShortSelling, R_f=r)
+
+  # End timing
+  end_time_main = time.time()
+
+  # Calculate elapsed time for main()
+  elapsed_time_main = end_time_main - start_time_main
+
+  # Print times
+  print(f"Time for DB query and calculation of rets: {elapsed_time_db} seconds")
+  print(f"Time for main(): {elapsed_time_main} seconds")
+
+  # Calculate and print the first time as a percentage of the second
+  percentage = (elapsed_time_db / elapsed_time_main) * 100
+  print(f"DB query and calculation of rets is {percentage}% of the time of main()")
+  price_history = pd.read_sql(f"SELECT * FROM price_history", con, index_col='Date', parse_dates=["Date"]).pct_change().iloc[1:]
 
   return jsonify(result)
 
@@ -93,7 +129,7 @@ def seed_db():
     risk_free_rate = yf.download("^IRX", progress=False,)['Adj Close'].tail(1)/100
     risk_free_rate.to_sql(name='risk_free_rate', con=con, if_exists='replace')
     price_history = download_symbols(pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
-    returns_history = price_history.pct_change().dropna()
+    returns_history = price_history.pct_change(fill_method=None).iloc[1:]
     print(price_history.columns)
     price_history.to_sql(name='price_history', con=con, if_exists='replace', chunksize=500)
     # May need to adjust chunksize, or con timeout
@@ -184,10 +220,16 @@ def get_option_price():
   assert isinstance(ticker, str), "ticker should be a string"
   R_f: float = float(request.args.get('R_f'))
 
-  con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-  results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
-  price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
-  # price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", con, index_col='Date', parse_dates=["Date"])
+  source = 'sqlite'
+  match source:
+    case 'sqlite':
+      con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+      results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
+      price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+    case 'feather':
+      price_history = pd.read_feather('price_history.feather', columns=['Date', ticker])
+      price_history.index = pd.to_datetime(price_history.index)
+      print(price_history)
   S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
   returns = price_history.pct_change()
   sigma = np.sqrt(365) * returns.std().iloc[0]

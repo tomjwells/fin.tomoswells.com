@@ -18,8 +18,8 @@ const pageParamsSchema = z.object({
     .number()
     .min(0)
     .transform((v) => (v < 0 ? 0 : v)),
-  startYear: z.coerce.number().min(2000).max(new Date().getFullYear()),
-  endYear: z.coerce.number().min(2000).max(new Date().getFullYear()),
+  startYear: z.coerce.number().min(1980).max(new Date().getFullYear()),
+  endYear: z.coerce.number().min(1980).max(new Date().getFullYear()),
   allowShortSelling: z.enum(['true', 'false']).transform((value) => value === 'true'),
 })
 export type PageParams = z.infer<typeof pageParamsSchema>
@@ -27,8 +27,8 @@ export type PageParams = z.infer<typeof pageParamsSchema>
 const formatPercent = (num: number) => `${(100 * num).toFixed(1)}%`
 
 export default async function MPTPage({ params, searchParams }: { params: { slug: string }; searchParams?: Record<string, string | string[] | undefined> }) {
-  const parsedParams = pageParamsSchema.safeParse(searchParams)
-  if (!parsedParams.success) {
+  const { data: pageParams, success } = pageParamsSchema.safeParse(searchParams)
+  if (!success) {
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
     getRandomElements(assets, 50).forEach((asset) => params.append('assets', asset))
@@ -38,20 +38,19 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
     params.append('allowShortSelling', `${false}`)
     redirect(`?${params.toString()}`)
   }
-  const pageParams = parsedParams.data
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-5'>
       <Flex direction='column' gap='2' mb='4'>
         <Heading size='6'>Modern Portfolio Theory</Heading>
         <Text size='1'>
-          A derivation of the formulae used for this implementation of Markowtiz’s Modern Portfolio Theory (MPT) can be found{' '}
+          The formulae used in this implementation of Markowtiz’s Modern Portfolio Theory (MPT) are derived in{' '}
           <Link asChild>
             <NextLink target='_blank' href={`https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf`}>
-              here
+              this document
             </NextLink>
           </Link>
-          . The code (Python) for the implementation is available{' '}
+          . Their implementation in Python is available{' '}
           <Link asChild>
             <NextLink target='_blank' href={`https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py`}>
               here
@@ -69,7 +68,6 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <Suspense>
           <FancyMultiSelect assets={await fetchAssets} pageParams={pageParams} />
         </Suspense>
-        <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is indicated by the solid white line.</Text>
 
         <div className='flex flex-col my-4'>
           <Heading size='3'>Allow Short Selling</Heading>
@@ -82,7 +80,9 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <Flex direction='column' gap='2' className='my-4'>
           <div>
             <Heading size='3'>Risk free rate</Heading>
-            <Text size='2'>The risk free rate is used to calculate the tangency portfolio. The current yield of the three-month U.S. Treasury bill is {(100*(await fetchRiskFreeRate)).toFixed(2)}%.</Text>
+            <Text size='2'>
+              The risk free rate is used to calculate the tangency portfolio. The current yield of the three-month U.S. Treasury bill is {(100 * (await fetchRiskFreeRate)).toFixed(2)}%.
+            </Text>
           </div>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
@@ -95,6 +95,10 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
             <Text size='2'>Asset statistics are calculated based on price action during a date range. Use the slider to adjust the date range used for the calculation.</Text>
           </div>
           <DateRangeSlider pageParams={pageParams} />
+        </Flex>
+
+        <Flex direction='column' gap='2' className='my-4'>
+          <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is indicated by the solid white line.</Text>
         </Flex>
 
         <Heading size='5' mt='4'>
@@ -156,7 +160,7 @@ async function fetchMPT(pageParams: PageParams) {
     }
 
     console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
-    const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { cache: 'no-cache', signal: AbortSignal.timeout(60_000) })
+    const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 }, signal: AbortSignal.timeout(60_000) })
     return MPTSchema.parse(await response.json())
   } else {
     return {
@@ -204,7 +208,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
                   <Heading size='6'>{formatPercent(data.tangency_portfolio.return)}</Heading>
                 </div>
                 <div className='w-1/2'>
-                  <Heading size='4' color='gray'>
+    730              <Heading size='4' color='gray'>
                     Volatility
                   </Heading>
                   <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
