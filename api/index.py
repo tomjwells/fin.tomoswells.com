@@ -211,10 +211,3 @@ def get_option_price():
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported"})
 
-# @app.route("/api/get_asset_price")
-# def get_asset_price():
-#   ticker = request.args.get('ticker')
-#   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-#   results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
-#   price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
-#   return jsonify(price_history.to_dict())

@@ -11,8 +11,6 @@ import z from 'zod'
 import { InfoCircledIcon } from '@radix-ui/react-icons'
 import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice } from '~/sqlite'
 
-export const runtime = 'nodejs'
-
 type Method = {
   label: string
   method: 'black-scholes' | 'monte-carlo' | 'binomial'
