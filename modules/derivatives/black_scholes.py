@@ -43,39 +43,43 @@ class black_scholes_option(object):
     self.d2 = self.d1 - sigma * math.sqrt(tau)
 
   def value(self, option_type: OptionType) -> float:
-    if option_type == 'call':
-      return self.S0 * norm_cdf(self.d1) - self.K * norm_cdf(self.d2) * math.exp(-self.r * self.tau)
-    elif option_type == 'put':
-      return - self.S0 * norm_cdf(-self.d1) + self.K * norm_cdf(-self.d2) * math.exp(-self.r * self.tau)
-    else:
-      raise ValueError("Invalid option type. Choose either 'call' or 'put'")
+    match option_type:
+      case 'call':
+        return self.S0 * norm_cdf(self.d1) - self.K * norm_cdf(self.d2) * math.exp(-self.r * self.tau)
+      case 'put':
+        return - self.S0 * norm_cdf(-self.d1) + self.K * norm_cdf(-self.d2) * math.exp(-self.r * self.tau)
+      case _:
+        raise ValueError("Invalid option type. Choose either 'call' or 'put'")
 
   def delta(self, option_type: OptionType) -> float:
-    if option_type == 'call':
-      return norm_cdf(self.d1)
-    elif option_type == 'put':
-      return norm_cdf(self.d1) - 1
-    else:
-      raise ValueError("Invalid option type. Choose either 'call' or 'put'")
+    match option_type:
+      case 'call':
+        return norm_cdf(self.d1)
+      case 'put':
+        return norm_cdf(self.d1) - 1
+      case _:
+        raise ValueError("Invalid option type. Choose either 'call' or 'put'")
 
   def gamma(self) -> float:
     return norm_pdf(self.d1) / (self.S0 * self.sigma * math.sqrt(self.tau))
 
   def theta(self, option_type: OptionType) -> float:
-    if option_type == 'call':
-      return -self.S0 * norm_pdf(self.d1) * self.sigma / (2 * math.sqrt(self.tau)) - self.r * self.K * math.exp(-self.r * self.tau) * norm_cdf(self.d2)
-    elif option_type == 'put':
-      return -self.S0 * norm_pdf(self.d1) * self.sigma / (2 * math.sqrt(self.tau)) + self.r * self.K * math.exp(-self.r * self.tau) * norm_cdf(-self.d2)
-    else:
-      raise ValueError("Invalid option type. Choose either 'call' or 'put'")
+    match option_type:
+      case 'call':
+        return -self.S0 * norm_pdf(self.d1) * self.sigma / (2 * math.sqrt(self.tau)) - self.r * self.K * math.exp(-self.r * self.tau) * norm_cdf(self.d2)
+      case 'put':
+        return -self.S0 * norm_pdf(self.d1) * self.sigma / (2 * math.sqrt(self.tau)) + self.r * self.K * math.exp(-self.r * self.tau) * norm_cdf(-self.d2)
+      case _:
+        raise ValueError("Invalid option type. Choose either 'call' or 'put'")
 
   def rho(self, option_type: OptionType) -> float:
-    if option_type == 'call':
-      return self.K * self.tau * math.exp(-self.r * self.tau) * norm_cdf(self.d2)
-    elif option_type == 'put':
-      return -self.K * self.tau * math.exp(-self.r * self.tau) * norm_cdf(-self.d2)
-    else:
-      raise ValueError("Invalid option type. Choose either 'call' or 'put'")
+    match option_type:
+      case 'call':
+        return self.K * self.tau * math.exp(-self.r * self.tau) * norm_cdf(self.d2)
+      case 'put':
+        return -self.K * self.tau * math.exp(-self.r * self.tau) * norm_cdf(-self.d2)
+      case _:
+        raise ValueError("Invalid option type. Choose either 'call' or 'put'")
 
   def vega(self) -> float:
     return self.S0 * norm_pdf(self.d1) * math.sqrt(self.tau)

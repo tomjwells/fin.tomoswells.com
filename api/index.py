@@ -6,45 +6,46 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
+from modules.derivatives.longstaff_schwartz import longstaff_schwartz
 from modules.derivatives.binomial_model import EUPrice, USPrice
 from modules.markowitz.main import main
 import pandas as pd
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
-# from sqlalchemy import create_engine
+from sqlalchemy import create_engine
 import libsql_experimental as libsql
 # import libsql_client as libsql
 
 
-# import redis
-# import functools
-# import pickle
+import redis
+import functools
+import pickle
 
-# r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
+r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
 
 # Decorator to cache the result of a function using Redis
 
 
-# def cache(func):
-#   @functools.wraps(func)
-#   def wrapper(*args, **kwargs):
-#     key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
-#     if (val := r.get(key)) is not None:
-#       print("Cache hit!")
-#       return pickle.loads(val)
-#     else:
-#       print("Cache miss!")
-#       val = func(*args, **kwargs)
-#       r.set(key, pickle.dumps(val))
-#       return val
-#   return wrapper
+def cache(func):
+  @functools.wraps(func)
+  def wrapper(*args, **kwargs):
+    key = f"{func.__name__}:{str(args)}:{str(kwargs)}"
+    if (val := r.get(key)) is not None:
+      print("Cache hit!")
+      return pickle.loads(val)
+    else:
+      print("Cache miss!")
+      val = func(*args, **kwargs)
+      r.set(key, pickle.dumps(val))
+      return val
+  return wrapper
 
 
 app = Flask(__name__)
 
 # con = libsql.create_client_sync(f"{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}")
 # con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-# con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
+con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
 # Markowitz
 
@@ -68,13 +69,13 @@ def markowitz_main():
   columns = ['Date'] + assets
   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
   # Python's isidentifier is used to prevent SQL injection
-  # Surpisingly, the sql query takes ~ 2/3 of the request duration for 50 assets (twice as long as the actual MPT calculation)
+  # Surpisingly, the sql query takes ~ 2/3 of the request duration for 50 assets (twice as long as the actual MPT computation)
   # Storing the table on disk as a .feather file reduces this, however it increases the lambda function size beyond 250MB, so keep with SQLite for now
-  query = f"SELECT {', '.join([f'`{col.replace('_', '.')}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
+  query = f"SELECT {', '.join([f'`{col}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
   rets = pd.DataFrame(
       con.execute(query, (start_date, end_date)).fetchall(),
       columns=columns
-  ).set_index('Date').iloc[1:]
+  ).set_index('Date')
   # rets = pd.read_csv('rets.csv',  index_col='Date', parse_dates=["Date"], usecols=columns).loc[start_date:end_date]
 
   result = main(rets, allowShortSelling, R_f=r)
@@ -127,7 +128,7 @@ def download_symbols(symbols: List[str]) -> pd.DataFrame:
   return df
 
 
-# @cache
+@cache
 def get_returns(ticker: str) -> pd.Series:
   # yfinance.download frequently errors, this wrapper makes downloading reliable
   for _ in range(int(1e5)):
@@ -144,7 +145,7 @@ def get_returns(ticker: str) -> pd.Series:
       time.sleep(2)
 
 
-# @cache
+@cache
 def download_data(ticker: str) -> pd.Series:
   """
     Downloads the adjusted close prices for a given ticker and calculates the daily returns
@@ -163,7 +164,7 @@ def get_option_price():
   option_type = request.args.get('optionType')
   assert option_type in ['european', 'american'], "option_type should be either 'european' or 'american'"
   method = request.args.get('method')
-  assert method in ['binomial', 'black-scholes', 'monte-carlo'], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
+  assert method in ['binomial', 'black-scholes', 'monte-carlo', "longstaff-schwartz"], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
   instrument: Literal['call', 'put'] = request.args.get('instrument')
   assert instrument in ['call', 'put'], "instrument should be either 'call' or 'put'"
 
@@ -211,3 +212,10 @@ def get_option_price():
     elif option_type == 'american':
       return jsonify({"error": "American options are not supported"})
 
+  if method == 'longstaff-schwartz':
+    num_trials = int(1e5)
+    num_timesteps = 100
+    if option_type == 'european':
+      return jsonify({"error": "European options are not supported"})
+    elif option_type == 'american':
+      return jsonify(longstaff_schwartz(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))

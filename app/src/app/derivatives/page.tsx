@@ -13,7 +13,7 @@ import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice } from '~/sqlite'
 
 type Method = {
   label: string
-  method: 'black-scholes' | 'monte-carlo' | 'binomial'
+  method: 'black-scholes' | 'monte-carlo' | 'binomial' | 'longstaff-schwartz'
   tooltip?: string
 }
 const METHODS: Method[] = [
@@ -31,6 +31,10 @@ const METHODS: Method[] = [
     label: 'Binomial',
     method: 'binomial',
   },
+  // {
+  //   label: 'Longstaff-Schwartz',
+  //   method: 'longstaff-schwartz',
+  // },
 ]
 
 const pageParamsSchema = z.object({
@@ -42,7 +46,7 @@ const pageParamsSchema = z.object({
 })
 export type PageParams = z.infer<typeof pageParamsSchema>
 type OptionPriceParams = PageParams & {
-  method: 'black-scholes' | 'monte-carlo' | 'binomial'
+  method: 'black-scholes' | 'monte-carlo' | 'binomial' | 'longstaff-schwartz'
   instrument: 'call' | 'put'
 }
 
@@ -64,7 +68,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
 
   const pageParams = pageParamsSchema.parse(searchParams)
 
-  const methods = pageParams.optionType === 'european' ? METHODS : ([METHODS[2]] as Method[])
+  const methods = pageParams.optionType === 'european' ? ([METHODS[0], METHODS[1]] as Method[]) : ([METHODS[2]] as Method[])
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-6'>

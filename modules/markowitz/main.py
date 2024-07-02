@@ -9,7 +9,7 @@ import numpy.typing as npt
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from functools import partial
 
-solvers.options['show_progress'] = True if os.environ.get("DEBUG") else False
+solvers.options['show_progress'] = False if os.environ.get("DEBUG") else False
 
 
 def main(rets, allowShortSelling: bool, R_f: float):
@@ -19,8 +19,6 @@ def main(rets, allowShortSelling: bool, R_f: float):
   rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1)
 
   # Notation: rets are daily, mu and Sigma are annualized
-  if os.environ.get("DEBUG"):
-    print(rets.head())
   # Use .values to cast to numpy arrays, which are faster to work with than DataFrames
   mu = 252 * rets.mean().values
   Sigma = 252 * rets.cov().values

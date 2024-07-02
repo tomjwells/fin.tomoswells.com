@@ -29,5 +29,5 @@ export const fetchUnderlyingPrice = (ticker: string) => {
   // Check ticker is safe
   if (!/^[a-zA-Z0-9_]+$/.test(ticker)) throw new Error('Invalid ticker')
   return db.execute(`SELECT ${ticker} FROM price_history ORDER BY Date DESC LIMIT 1`).then(({ rows }) => rows[0]?.[ticker] as number)
-  // return yahooFinance.quote(ticker.replace('_', '-')).then((data) => data.regularMarketPrice as number)
+  // return yahooFinance.quote(ticker.replace('_', '-')).then((data) => data.regularMarketPrice as number) // incompatible with edge runtime
 }
