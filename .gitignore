@@ -1,5 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+NOTES.md
+speedtest.sh
 modules/timeseries
 
 # apps/docs
@@ -222,6 +224,3 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-
-NOTES.md
-speedtest.sh

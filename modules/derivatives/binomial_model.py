@@ -1,25 +1,21 @@
 import numpy as np
-from typing import Literal
-
-
-def call_payoff(S: float, K: float) -> float:
-  return max(S - K, 0)
-
-
-def put_payoff(S: float, K: float) -> float:
-  return max(K - S, 0)
+from typing import Literal, List
 
 
 type OptionType = Literal['call', 'put']
 
 
-def EUPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
+def option_payoff(S: float | List[float], K: float, instrument: OptionType) -> float | List[float]:
   if instrument == "call":
-    payoff = call_payoff
+    return np.maximum(S - K, 0)
   elif instrument == "put":
-    payoff = put_payoff
+    return np.maximum(K - S, 0)
   else:
     raise ValueError("Invalid instrument. Choose either 'call' or 'put'")
+
+
+def EUPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
+
   S = np.zeros(NoSteps + 1)
   V = np.zeros(NoSteps + 1)
   dt = tau / NoSteps
@@ -39,7 +35,7 @@ def EUPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float
     # S[n:] = u * S[n-1:-1]
     # S[0] = d * S[0]
   for j in range(NoSteps + 1):
-    V[j] = payoff(S[j], K)
+    V[j] = option_payoff(S[j], K, instrument)
   for n in range(NoSteps, 0, -1):
     V[:n] = (p * V[1:n+1] + (1 - p) * V[:n]) * discount_factor
     # Non-vectorized version:
@@ -48,17 +44,9 @@ def EUPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float
   return V[0]
 
 
-def USPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float, tau: float, NoSteps: int) -> float:
-  if instrument == "call":
-    payoff = call_payoff
-  elif instrument == "put":
-    payoff = put_payoff
-  else:
-    raise ValueError("Invalid instrument. Choose either 'call' or 'put'")
+def USPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float, tau: float, N: int) -> float:
 
-  S = np.zeros((NoSteps + 1, NoSteps + 1))
-  V = np.zeros((NoSteps + 1, NoSteps + 1))
-  dt = tau / NoSteps
+  dt = tau / N
   discount_factor = np.exp(-r * dt)
   temp1 = np.exp((r + sigma ** 2) * dt)
   temp2 = 0.5 * (discount_factor + temp1)
@@ -67,14 +55,37 @@ def USPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float
   d: float = 1 / u
   p: float = (np.exp(r * dt) - d) / (u - d)
 
-  S[0, 0] = S_0
-  for n in range(1, NoSteps + 1):
-    for j in range(n, 0, -1):
-      S[j, n] = u * S[j - 1, n - 1]
-    S[0, n] = d * S[0, n - 1]
-  for j in range(NoSteps + 1):
-    V[j, NoSteps] = payoff(S[j, NoSteps], K)
-  for n in range(NoSteps, 0, -1):
-    for j in range(n):
-      V[j, n - 1] = max((p * V[j + 1, n] + (1 - p) * V[j, n]) * discount_factor, payoff(S[j, n - 1], K))
-  return V[0, 0]
+  method: Literal["slow", "fast"] = "fast"
+
+  if method == "slow":
+    S = np.zeros(N+1)
+    for j in range(N+1):
+      S[j] = S_0 * (u ** j) * (d ** (N - j))
+
+    # Option Payoff
+    C = np.zeros(N + 1)
+    for j in range(N + 1):
+      C[j] = option_payoff(S[j], K, instrument)
+
+    # Backward recursion through the tree
+    for i in np.arange(N - 1, -1, -1):
+      for j in range(0, i + 1):
+        S = S_0 * (u ** j) * (d ** (i - j))
+        C[j] = discount_factor * (p * C[j + 1] + (1 - p) * C[j])
+        C[j] = max(C[j], option_payoff(S, K, instrument))
+    return C[0]
+
+  elif method == "fast":
+    S = S_0 * d ** np.arange(N, -1, -1) * u ** np.arange(N + 1)
+
+    # Option Payoff
+    C = np.maximum(option_payoff(S, K, instrument), np.zeros(N + 1))
+
+    # Backward recursion through the tree
+    for i in np.arange(N - 1, -1, -1):
+      S = S_0 * d ** np.arange(i, -1, -1) * u ** np.arange(i + 1)
+      C[:i+1] = discount_factor * (p * C[1:i+2] + (1 - p) * C[0:i+1])
+      C = C[:-1]
+      C = np.maximum(C, option_payoff(S, K, instrument))
+
+    return C[0]

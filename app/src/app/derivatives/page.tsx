@@ -68,7 +68,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
 
   const pageParams = pageParamsSchema.parse(searchParams)
 
-  const methods = pageParams.optionType === 'european' ? ([METHODS[0], METHODS[1]] as Method[]) : ([METHODS[2]] as Method[])
+  const methods = pageParams.optionType === 'european' ? ([METHODS[0], METHODS[1], METHODS[2]] as Method[]) : ([METHODS[2]] as Method[])
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-6'>
