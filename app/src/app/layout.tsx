@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang='en' className='dark' style={{ colorScheme: 'dark' }}>
       {/* <body className={`font-sans ${inter.variable}`}> */}
-      <script async src='/u' data-website-id={env.HOME} />
+      <script async src='/u' data-website-id={env.HOME_UID} />
       <body className={inter.variable}>
         <Theme appearance='dark'>
           <div className='flex min-h-screen flex-col'>

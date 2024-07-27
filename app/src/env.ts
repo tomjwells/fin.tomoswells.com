@@ -8,7 +8,7 @@ export const env = createEnv({
     API_URL: z.string().url(),
     TURSO_DATABASE_URL: z.string().url(),
     TURSO_AUTH_TOKEN: z.string(),
-    HOME: z.string(),
+    HOME_UID: z.string(),
   },
   experimental__runtimeEnv: {},
   emptyStringAsUndefined: true,
