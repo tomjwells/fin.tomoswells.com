@@ -1,11 +1,18 @@
 import numpy as np
 from typing import Literal, List
+from numpy.typing import NDArray
 
 
 type OptionType = Literal['call', 'put']
 
 
-def option_payoff(S: float | List[float], K: float, instrument: OptionType) -> float | List[float]:
+def option_payoff(S: float | NDArray[np.float64], K: float, instrument: OptionType) -> float | NDArray[np.float64]:
+  """
+    Vectorized option payoff function
+      :param S: Stock price
+      :param K: Strike price
+      :param instrument: Option type
+  """
   if instrument == "call":
     return np.maximum(S - K, 0)
   elif instrument == "put":
@@ -55,9 +62,9 @@ def USPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float
   d: float = 1 / u
   p: float = (np.exp(r * dt) - d) / (u - d)
 
-  method: Literal["slow", "fast"] = "fast"
+  mode: Literal["scalar", "vectorized"] = "vectorized"
 
-  if method == "slow":
+  if mode == "scalar":
     S = np.zeros(N+1)
     for j in range(N+1):
       S[j] = S_0 * (u ** j) * (d ** (N - j))
@@ -75,14 +82,14 @@ def USPrice(instrument: OptionType, S_0: float, sigma: float, r: float, K: float
         C[j] = max(C[j], option_payoff(S, K, instrument))
     return C[0]
 
-  elif method == "fast":
+  elif mode == "vectorized":
     S = S_0 * d ** np.arange(N, -1, -1) * u ** np.arange(N + 1)
 
     # Option Payoff
     C = np.maximum(option_payoff(S, K, instrument), np.zeros(N + 1))
 
     # Backward recursion through the tree
-    for i in np.arange(N - 1, -1, -1):
+    for i in range(N - 1, -1, -1):
       S = S_0 * d ** np.arange(i, -1, -1) * u ** np.arange(i + 1)
       C[:i+1] = discount_factor * (p * C[1:i+2] + (1 - p) * C[0:i+1])
       C = C[:-1]

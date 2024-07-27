@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 'use client'
 import React from 'react'
@@ -142,7 +141,7 @@ export default function ChartJSChart({
     }
     // Add weights
     if (tooltip.dataPoints[0]?.raw.weights) {
-      console.log({ tooltipItems: tooltip.dataPoints[0]?.raw.weights })
+      // console.log({ tooltipItems: tooltip.dataPoints[0]?.raw.weights })
       const weights = tooltip.dataPoints[0]?.raw.weights
 
       if (weights) {
@@ -162,7 +161,8 @@ export default function ChartJSChart({
 
         // Create the table body
         const tbody = document.createElement('tbody')
-        for (const [k, v] of Object.entries(weights)) {
+        const sortedEntries = Object.entries(weights).sort((a, b) => b[1] - a[1])
+        for (const [k, v] of sortedEntries) {
           const row = document.createElement('tr')
           // Create a colored square
           const colorSquare = document.createElement('span')

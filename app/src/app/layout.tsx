@@ -1,7 +1,6 @@
 import '~/styles/globals.css'
 import '@radix-ui/themes/styles.css'
 
-import { Suspense } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '~/shadcn/Tabs'
 
 import { Inter } from 'next/font/google'
@@ -29,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang='en' className='dark' style={{ colorScheme: 'dark' }}>
       {/* <body className={`font-sans ${inter.variable}`}> */}
+      <script async src='/u' data-website-id={env.HOME} />
       <body className={inter.variable}>
         <Theme appearance='dark'>
           <div className='flex min-h-screen flex-col'>

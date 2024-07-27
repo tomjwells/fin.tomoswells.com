@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { tickers } from '~/data'
 import { BookmarkIcon, ShuffleIcon, TrashIcon, Cross2Icon as X } from '@radix-ui/react-icons'
 import { Command, CommandGroup, CommandItem } from '~/shadcn/Command'
 import { Command as CommandPrimitive } from 'cmdk'
@@ -20,7 +21,6 @@ export function getRandomElements(arr: string[], count: number): string[] {
   }
   return Array.from(result)
 }
-
 
 export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: string[]; pageParams: PageParams }) {
   const selectedAssets = pageParams.assets
@@ -83,7 +83,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
     <Flex direction='column' gap='2'>
       <Flex gap='2' justify='end'>
         <Button
-          size="1"
+          size='1'
           style={{ width: 120 }}
           onClick={() => {
             setSelected(getRandomElements(assets, 80))
@@ -92,7 +92,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
           <ShuffleIcon /> Randomize
         </Button>
         <Button
-        size="1"
+          size='1'
           style={{ width: 120, color: 'var(--red-9)' }}
           onClick={() => {
             setSelected([])
@@ -167,7 +167,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
                         }}
                         className={'cursor-pointer'}
                       >
-                        {asset}
+                        {tickers[asset]?.longName} ({asset})
                       </CommandItem>
                     )
                   })}
@@ -179,4 +179,3 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
     </Flex>
   )
 }
-
