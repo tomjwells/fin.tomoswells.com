@@ -2,6 +2,7 @@
 import { Flex, Select } from '@radix-ui/themes'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { PageParams } from '../page'
+import { tickers } from '~/data'
 
 export default function SelectTicker({ pageParams, assets }: { pageParams: PageParams; assets: string[] }) {
   const router = useRouter()
@@ -23,7 +24,7 @@ export default function SelectTicker({ pageParams, assets }: { pageParams: PageP
           <Select.Group>
             {assets.map((asset) => (
               <Select.Item key={asset} value={asset}>
-                {asset}
+                {tickers[asset]?.longName} ({asset})
               </Select.Item>
             ))}
           </Select.Group>

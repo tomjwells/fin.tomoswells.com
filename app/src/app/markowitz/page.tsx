@@ -31,7 +31,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   if (!success) {
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
-    getRandomElements(assets, 50).forEach((asset) => params.append('assets', asset))
+    getRandomElements(assets, 30).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
@@ -198,9 +198,10 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
         </Card>
         {data.tickers.length >= 2 && (
           <>
-            <div className='flex flex-col gap-4'>
-              <Heading size='5'>Metrics</Heading>
-              <div className='flex gap-4'>
+            <Flex direction='column' gap='4'>
+              {/* <div className='flex flex-col gap-4'> */}
+              <Heading size='5'>Tangency Portfolio Metrics</Heading>
+              <Flex gap='4'>
                 <div className='w-1/2'>
                   <Heading size='4' color='gray'>
                     Expected Return
@@ -213,8 +214,8 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
                   </Heading>
                   <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
                 </div>
-              </div>
-              <div className='flex gap-4'>
+              </Flex>
+              <Flex gap='4'>
                 <div className='w-1/2'>
                   <Heading size='4' color='gray'>
                     Sharpe Ratio
@@ -227,10 +228,10 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
                   </Heading>
                   <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
                 </div>
-              </div>
-            </div>
+              </Flex>
+            </Flex>
             <Suspense>
-              <Heading size='4'>The Tangency Portfolio</Heading>
+              <Heading size='4'>Tangency Portfolio Weights</Heading>
               <TangencyPortfolioPieChart mptData={data} />
             </Suspense>
           </>

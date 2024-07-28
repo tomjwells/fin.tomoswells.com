@@ -37,8 +37,8 @@ export default function ChartJSChart({
   //   .filter(d => d.risk < X_MAX)
   //   .map(d => d.return))
   const Y_MIN = -0.2
-  // const Y_MAX = Math.max(...data.filter(d => d.risk < X_MAX).map(d => d.return))
-  const Y_MAX = 0.7
+  const Y_MAX = 0.1 + Math.max(...data.filter((d) => d.risk < X_MAX).map((d) => d.return))
+  // const Y_MAX = 0.7
 
   const externalTooltipHandler = (context) => {
     // Tooltip Element

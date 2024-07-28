@@ -2,14 +2,13 @@
 
 import * as React from 'react'
 import { tickers } from '~/data'
-import { BookmarkIcon, ShuffleIcon, TrashIcon, Cross2Icon as X } from '@radix-ui/react-icons'
+import { ShuffleIcon, Cross2Icon as X } from '@radix-ui/react-icons'
 import { Command, CommandGroup, CommandItem } from '~/shadcn/Command'
 import { Command as CommandPrimitive } from 'cmdk'
-// import { Badge } from "~/shadcn/Badge"
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PageParams } from '../page'
 import { Spinner, Badge, Flex, Button } from '@radix-ui/themes'
-import { LucideTrash, Trash, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 const DEBOUNCE_TIME = 150
 
@@ -50,9 +49,6 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
     )
   }
 
-  const handleUnselect = (asset: string) => {
-    setSelected((prev) => prev.filter((s) => s !== asset))
-  }
   React.useEffect(() => {
     !open && update()
   }, [open, selected])
@@ -82,52 +78,36 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
   return (
     <Flex direction='column' gap='2'>
       <Flex gap='2' justify='end'>
-        <Button
-          size='1'
-          style={{ width: 120 }}
-          onClick={() => {
-            setSelected(getRandomElements(assets, 80))
-          }}
-        >
+        <Button size='1' style={{ width: 120 }} onClick={() => setSelected(getRandomElements(assets, 30))}>
           <ShuffleIcon /> Randomize
         </Button>
-        <Button
-          size='1'
-          style={{ width: 120, color: 'var(--red-9)' }}
-          onClick={() => {
-            setSelected([])
-          }}
-          variant='outline'
-          color='gray'
-        >
+        <Button size='1' style={{ width: 120, color: 'var(--red-9)' }} onClick={() => setSelected([])} variant='outline' color='gray'>
           <Trash2 size={12} /> Clear
         </Button>
       </Flex>
       <Command onKeyDown={handleKeyDown} className='overflow-visible bg-transparent'>
         <div className='group border border-input px-3 py-2 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'>
           <div className='flex gap-1 flex-wrap'>
-            {selected.map((asset) => {
-              return (
-                <Badge key={asset} variant='soft'>
-                  {asset}
-                  <button
-                    className='ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleUnselect(asset)
-                      }
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                    }}
-                    onClick={() => handleUnselect(asset)}
-                  >
-                    <X className='h-3 w-3 text-muted-foreground hover:text-foreground' />
-                  </button>
-                </Badge>
-              )
-            })}
+            {selected.map((asset) => (
+              <Badge key={asset} variant='soft'>
+                {asset}
+                <button
+                  className='ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+                  onClick={() => setSelected((prev) => prev.filter((s) => s !== asset))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setSelected((prev) => prev.filter((s) => s !== asset))
+                    }
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                >
+                  <X className='h-3 w-3 text-muted-foreground hover:text-foreground' />
+                </button>
+              </Badge>
+            ))}
             <CommandPrimitive.Input
               ref={inputRef}
               value={inputValue}
