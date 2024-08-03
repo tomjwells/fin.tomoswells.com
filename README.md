@@ -16,6 +16,8 @@ Each subdirectory of this repository serves a different purpose. Understanding t
 
 The options pricing page applies various pricing techniques to the pricing of European and American options.
 
+See [./modules/derivatives](https://github.com/tomjwells/finance/tree/master/modules/derivatives) for the Python files implementing these algorithms.
+
 The following methods are applied to the pricing of European options:
   - [Black-Scholes analytical solution](https://github.com/tomjwells/finance/blob/master/modules/derivatives/black_scholes.py) 
   - [Monte Carlo simulations](https://github.com/tomjwells/finance/blob/master/modules/derivatives/monte_carlo.py) of geometric Brownian motion
@@ -24,16 +26,12 @@ The following methods are applied to the pricing of European options:
 The following methods are applied to the pricing of American options:
   - [The Binomial Tree method](https://github.com/tomjwells/finance/blob/master/modules/derivatives/binomial_model.py)
 
-The user may select an equity from the S&P500, a maturity date and a strike price for the option.
-
-See [./modules/derivatives](https://github.com/tomjwells/finance/tree/master/modules/derivatives) for the Python files implementing these algorithms.
-
 
 # Modern Portfolio Theory ([link](https://fin.tomoswells.com/markowitz))
 
 The formulae used to find the efficient frontier analytically are derived in [Markowitz_Theory.pdf](https://github.com/tomjwells/finance/blob/master/modules/markowitz/Markowitz_Theory.pdf).
 
-The Python code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
+Python code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
 
 # Running the Project
 
