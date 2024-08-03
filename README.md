@@ -31,17 +31,13 @@ See [./modules/derivatives](https://github.com/tomjwells/finance/tree/master/mod
 
 # Modern Portfolio Theory ([link](https://fin.tomoswells.com/markowitz))
 
-Modern Portfolio Theory (MPT) is a model that provides a way of finding the most  *efficient* portfolios given a basked of possible assets. An efficient potfolio in this context, is one that provides the highest possible expected return for a given level of volatility, or "risk".
+The formulae used to find the efficient frontier analytically are derived in [Markowitz_Theory.pdf](https://github.com/tomjwells/finance/blob/master/modules/markowitz/Markowitz_Theory.pdf).
 
-This tool calculates the efficient frontier of portfolios based on a user-selected basket of equities. The capital market line is plotted and the tangency portfolio for the basket of assets is calculated, along with relevant metrics such as the Sharpe and Sortino ratios. The user may also specify their own parameters for the calculation, such as the risk-free rate, and the number of years to be considered when evaluating the historical mean return and volatility of the asset.
-
-A derivation of the necessary algebra to find the efficient frontier analytically is provided in [Markowitz_Theory.pdf](https://github.com/tomjwells/finance/blob/master/modules/markowitz/Markowitz_Theory.pdf).
-
-The code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
+The Python code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
 
 # Running the Project
 
-Commonly run tasks related have aliases created for them, which are defined in the file `aliases.sh`. 
+I have created aliases for common tasks, which are defined in the file `aliases.sh`. 
 
 To load these in your shell, run
 ```
@@ -50,11 +46,10 @@ source aliases.sh
 
 ## Flask
 
-To install the Python dependencies, use the alias
+The necessary Python dependencies can be installed using the alias
 ```
 pyenv
 ```
-which installs the necessary libraries using `pip` and activates the new environment.
 
 The flask application may be launched using
 ```
