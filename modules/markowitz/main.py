@@ -1,7 +1,7 @@
-from cvxopt import matrix, solvers, blas
+from cvxopt import matrix, solvers
 import os
 import time
-from typing import Tuple, List, Any
+from typing import Dict, TypedDict, Tuple, List, Any
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from functools import partial
 solvers.options['show_progress'] = False if os.environ.get("DEBUG") else False
 
 
-def main(rets, allowShortSelling: bool, R_f: float):
+def main(rets: pd.DataFrame, allowShortSelling: bool, R_f: float):
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
@@ -20,9 +20,9 @@ def main(rets, allowShortSelling: bool, R_f: float):
 
   # Notation: rets are daily, mu and Sigma are annualized
   # Use .values to cast to numpy arrays, which are faster to work with than DataFrames
-  mu = 252 * rets.mean().values
-  Sigma = 252 * rets.cov().values
-  inv_Sigma = np.linalg.inv(Sigma)
+  mu: npt.NDArray = 252 * rets.mean().to_numpy()
+  Sigma: npt.NDArray = 252 * rets.cov().to_numpy()
+  inv_Sigma: npt.NDArray = np.linalg.inv(Sigma)
 
   # Calculate the efficient frontier
   if allowShortSelling:
@@ -48,7 +48,14 @@ def main(rets, allowShortSelling: bool, R_f: float):
   }
 
 
-def efficient_frontier(mu: npt.NDArray[np.floating[Any]], inv_Sigma: np.ndarray[Any, Any], R_p_linspace: npt.NDArray[np.floating[Any]]) -> Tuple[np.floating[Any], np.floating[Any]]:
+def efficient_frontier(
+    mu: npt.NDArray[np.float64],
+    inv_Sigma: npt.NDArray[np.float64],
+    R_p_linspace: npt.NDArray[np.float64]
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+  """
+    Calculate the efficient frontier using the analytic solution.
+  """
   ones = np.ones(len(mu))
   inv_Sigma_at_mu = inv_Sigma @ mu
   inv_Sigma_at_ones = inv_Sigma @ ones
@@ -57,17 +64,21 @@ def efficient_frontier(mu: npt.NDArray[np.floating[Any]], inv_Sigma: np.ndarray[
   f = ones.T @ inv_Sigma_at_ones
   d = a * f - c ** 2
   one_over_d = 1 / d
-  var_p = one_over_d * (f * (R_p_linspace ** 2) - 2 * c * R_p_linspace + a)
+  risk = np.sqrt(one_over_d * (f * (R_p_linspace ** 2) - 2 * c * R_p_linspace + a))
 
-  # Vectorized calculation of the portfolio weights along the efficient frontier
+  # Vectorized calculation (over the linspace of returns) of the portfolio weights along the efficient frontier
   lambda_1 = + one_over_d * (f * R_p_linspace - c)
   lambda_2 = - one_over_d * (c * R_p_linspace - a)
   weights = lambda_1[:, None] * (inv_Sigma_at_mu) + lambda_2[:, None] * (inv_Sigma_at_ones)
 
-  return weights, np.sqrt(var_p)
+  return weights, risk
 
 
-def calculate_sortino_variance(rets, weights, T):
+def calculate_sortino_variance(
+    rets: pd.DataFrame,
+    weights: List[float],
+    T: float
+) -> np.float64:
   """
     Calculate the Sortino variance of a portfolio. Calculated using the definition in
     https://www.cmegroup.com/education/files/rr-sortino-a-sharper-ratio.pdf.
@@ -94,7 +105,11 @@ def calculate_portfolio(R_p, S, q, G, h, A):
   return solvers.qp(S, q, G, h, A, matrix([R_p, 1.0]))['x']
 
 
-def efficient_frontier_numerical(mu, Sigma, R_p_linspace):
+def efficient_frontier_numerical(
+    mu: npt.NDArray[np.float64],
+    Sigma: npt.NDArray[np.float64],
+    R_p_linspace: npt.NDArray[np.float64]
+) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
   N = len(mu)  # The number of assets in a portfolio
 
   # Quadratic term
@@ -121,11 +136,23 @@ def efficient_frontier_numerical(mu, Sigma, R_p_linspace):
   return weights, risks
 
 
-def find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=False):
+class TangencyPortfolio(TypedDict):
+  return_: npt.NDArray[np.float64]
+  risk: npt.NDArray[np.float64]
+  weights: List[float]
+
+
+def find_tangency_portfolio(
+    mu: npt.NDArray[np.float64],
+    Sigma: npt.NDArray[np.float64],
+    inv_Sigma: npt.NDArray[np.float64],
+    R_f: float,
+    allow_short_selling: bool = False
+) -> TangencyPortfolio:
   """
-    Function to find the tangency portfolio
-    If short selling is allowed, the analytic solution is used
-    If short selling is not allowed, a quadratic programming method is used
+  Function to find the tangency portfolio
+  If short selling is allowed, the analytic solution is used
+  If short selling is not allowed, a quadratic programming method is used
   """
 
   N = len(mu)
@@ -159,7 +186,7 @@ def find_tangency_portfolio(mu, Sigma, inv_Sigma, R_f, allow_short_selling=False
     tangency_weights = np.array(x).squeeze()/np.sum(x)
 
   return {
-      "return": mu @ tangency_weights,
+      "return_": mu @ tangency_weights,
       "risk": np.sqrt(tangency_weights.T @ Sigma @ tangency_weights),
       "weights": tangency_weights.tolist(),
   }
