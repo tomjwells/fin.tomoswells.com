@@ -23,16 +23,14 @@ export default function ChartJSChart({
 }) {
   const data = mptData.efficient_frontier
   const slope = (tangencyPortfolio.return_ - riskFreeRate) / (tangencyPortfolio.risk - 0)
-  console.log({ tangency_portfolio: tangencyPortfolio })
 
   const X_MIN = 0
+  // const X_MAX = 0.1 + Math.max(...mptData.asset_datapoints.map((d) => d.risk))
   const X_MAX = 0.7
-  // const Y_MIN = Math.min(...data
-  //   .filter(d => d.risk < X_MAX)
-  //   .map(d => d.return))
   const Y_MIN = -0.2
-  const Y_MAX = 0.1 + Math.max(...data.filter((d) => d.risk < X_MAX).map((d) => d.return))
+  const Y_MAX = 0.1 + Math.max(...mptData.asset_datapoints.map((d) => d.return), tangencyPortfolio.return_)
   // const Y_MAX = 0.7
+  console.log({ X_MAX, X_MIN, Y_MAX, Y_MIN, return_: tangencyPortfolio.return_ })
 
   const externalTooltipHandler = (context) => {
     // Tooltip Element
@@ -339,6 +337,9 @@ export default function ChartJSChart({
     scales: {
       x: {
         // 'x' for x-axis
+        type: 'linear',
+        min: X_MIN, // set minimum value
+        max: X_MAX, // set maximum value
         border: { dash: [4, 4] }, // for the grid lines
         title: {
           display: true,
@@ -357,16 +358,11 @@ export default function ChartJSChart({
           drawTicks: true, // true is default
           drawOnChartArea: true, // true is default
         },
-        type: 'linear',
-        min: X_MIN, // set minimum value
-        max: X_MAX, // set maximum value
         ticks: {
           stepSize: 0.1, // set increment size
           color: 'rgba(256, 256, 256, 0.7)', // grey color
           borderDash: [5, 5], // dashed lines
-          callback: function (value: number, index: number, values: number[]) {
-            return Math.round(value * 10) * 10 + '%' // convert to percentage
-          },
+          callback: (value: number, index: number, values: number[]) => Math.round(value * 10) * 10 + '%', // convert to percentage
           font: {
             size: 14,
           },
@@ -387,13 +383,11 @@ export default function ChartJSChart({
         },
         ticks: {
           stepSize: 0.1, // set increment size
-          color: 'rgba(256, 256, 256, 0.8)', // grey color
+          color: 'rgba(256, 256, 256, 0.7)', // grey color
           borderDash: [5, 5], // dashed lines
           callback: function (value: number, index: number, values: number[]) {
             // Don't display the label for Y_MIN and Y_MAX
-            if (value === Y_MIN || value === Y_MAX) {
-              return ''
-            }
+            if (value === Y_MIN || value === Y_MAX) return ''
             return Math.round(value * 10) * 10 + '%' // convert to percentage
           },
           font: {
