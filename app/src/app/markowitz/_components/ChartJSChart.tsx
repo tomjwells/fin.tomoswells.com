@@ -28,9 +28,10 @@ export default function ChartJSChart({
   // const X_MAX = 0.1 + Math.max(...mptData.asset_datapoints.map((d) => d.risk))
   const X_MAX = 0.7
   const Y_MIN = -0.2
-  const Y_MAX = 0.1 + Math.max(...mptData.asset_datapoints.map((d) => d.return), tangencyPortfolio.return_)
+  // const Y_MAX = Math.min(0.1 + Math.max(...mptData.asset_datapoints.map((d) => d.return), tangencyPortfolio.return_), 0.8)
+  const Y_MAX = 0.2 + Math.max(...mptData.asset_datapoints.map((d) => d.return)) // Best not to include tangencyPortfolio.return_ here since it can take on large values for certain portfolios
   // const Y_MAX = 0.7
-  console.log({ X_MAX, X_MIN, Y_MAX, Y_MIN, return_: tangencyPortfolio.return_ })
+  console.log({ X_MAX, X_MIN, Y_MAX, Y_MIN, x: tangencyPortfolio.risk, y: tangencyPortfolio.return_ })
 
   const externalTooltipHandler = (context) => {
     // Tooltip Element
