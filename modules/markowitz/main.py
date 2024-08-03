@@ -1,27 +1,20 @@
 from cvxopt import matrix, solvers
 import os
-import time
 from typing import Dict, TypedDict, Tuple, List, Any
-from datetime import datetime
 import numpy as np
-import pandas as pd
 import numpy.typing as npt
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
+# Switch to True to show the progress of the optimization in the server logs
 solvers.options['show_progress'] = False if os.environ.get("DEBUG") else False
 
 
-def main(rets: pd.DataFrame, allowShortSelling: bool, R_f: float):
-
-  # Verify all columns contain numbers, if not we discard the column
-  # This can happen if a ticker began trading after the date range
-  rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1)
+def main(tickers: List[str], rets: npt.NDArray[np.float64], allowShortSelling: bool, R_f: float):
 
   # Notation: rets are daily, mu and Sigma are annualized
-  # Use .values to cast to numpy arrays, which are faster to work with than DataFrames
-  mu: npt.NDArray = 252 * rets.mean().to_numpy()
-  Sigma: npt.NDArray = 252 * rets.cov().to_numpy()
+  mu: npt.NDArray = 252 * np.nanmean(rets, axis=0)
+  Sigma: npt.NDArray = 252 * np.cov(rets, rowvar=False)
   inv_Sigma: npt.NDArray = np.linalg.inv(Sigma)
 
   # Calculate the efficient frontier
@@ -40,9 +33,9 @@ def main(rets: pd.DataFrame, allowShortSelling: bool, R_f: float):
   sortino_variance = calculate_sortino_variance(rets, tangency_portfolio['weights'], R_f)
 
   return {
-      "tickers": rets.columns.tolist(),
+      "tickers": tickers,
       "efficient_frontier": [{"return": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i].tolist()} for i in range(len(R_p_linspace))],
-      "asset_datapoints": [{"ticker": ticker, "return": ret, "risk": risk} for ticker, ret, risk in zip(rets.columns, mu, np.sqrt(np.diag(Sigma)))],
+      "asset_datapoints": [{"ticker": ticker, "return": ret, "risk": risk} for ticker, ret, risk in zip(tickers, mu, np.sqrt(np.diag(Sigma)))],
       "tangency_portfolio": tangency_portfolio,
       "sortino_variance": sortino_variance
   }
@@ -75,7 +68,7 @@ def efficient_frontier(
 
 
 def calculate_sortino_variance(
-    rets: pd.DataFrame,
+    rets: npt.NDArray[np.float64],
     weights: List[float],
     T: float
 ) -> np.float64:
@@ -141,6 +134,12 @@ class TangencyPortfolio(TypedDict):
   risk: npt.NDArray[np.float64]
   weights: List[float]
 
+
+TangencyPortfolio = TypedDict('TangencyPortfolio', {
+    'return_': npt.NDArray[np.float64],
+    'risk': npt.NDArray[np.float64],
+    'weights': List[float]
+})
 
 def find_tangency_portfolio(
     mu: npt.NDArray[np.float64],

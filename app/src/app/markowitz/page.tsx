@@ -118,7 +118,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   )
 }
 
-export const MPTSchema = z.object({
+const MPTSchema = z.object({
   tickers: z.array(z.string()),
   efficient_frontier: z.array(
     z.object({

@@ -22,7 +22,7 @@ export default function ChartJSChart({
   allowShortSelling: boolean
 }) {
   const data = mptData.efficient_frontier
-  const slope = (tangencyPortfolio.return - riskFreeRate) / (tangencyPortfolio.risk - 0)
+  const slope = (tangencyPortfolio.return_ - riskFreeRate) / (tangencyPortfolio.risk - 0)
   console.log({ tangency_portfolio: tangencyPortfolio })
 
   const X_MIN = 0
@@ -210,7 +210,7 @@ export default function ChartJSChart({
     datasets: [
       {
         label: 'Tangency Portfolio',
-        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return, title: 'Tangency Portfolio' }], // replace with your actual data
+        data: [{ x: tangencyPortfolio.risk, y: tangencyPortfolio.return_, title: 'Tangency Portfolio' }], // replace with your actual data
         type: 'scatter', // set type to scatter
         mode: 'markers',
         borderColor: tangentPortfolioColour,
