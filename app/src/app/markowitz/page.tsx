@@ -118,7 +118,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   )
 }
 
-const MPTSchema = z.object({
+export const MPTSchema = z.object({
   tickers: z.array(z.string()),
   efficient_frontier: z.array(
     z.object({
@@ -136,7 +136,7 @@ const MPTSchema = z.object({
   ),
   tangency_portfolio: z.object({
     weights: z.array(z.number()),
-    return: z.number(),
+    return_: z.number(),
     risk: z.number(),
   }),
   sortino_variance: z.number(),
@@ -169,7 +169,7 @@ async function fetchMPT(pageParams: PageParams) {
       asset_datapoints: [],
       tangency_portfolio: {
         weights: [],
-        return: 0,
+        return_: 0,
         risk: 0,
       },
       sortino_variance: 0,
@@ -206,7 +206,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
                   <Heading size='4' color='gray'>
                     Expected Return
                   </Heading>
-                  <Heading size='6'>{formatPercent(data.tangency_portfolio.return)}</Heading>
+                  <Heading size='6'>{formatPercent(data.tangency_portfolio.return_)}</Heading>
                 </div>
                 <div className='w-1/2'>
                   <Heading size='4' color='gray'>
@@ -220,13 +220,13 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
                   <Heading size='4' color='gray'>
                     Sharpe Ratio
                   </Heading>
-                  <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / (data.tangency_portfolio.risk - 0)).toFixed(2)}</Heading>
+                  <Heading size='6'>{((data.tangency_portfolio.return_ - pageParams.r) / (data.tangency_portfolio.risk - 0)).toFixed(2)}</Heading>
                 </div>
                 <div className='w-1/2'>
                   <Heading size='4' color='gray'>
                     Sortino Ratio
                   </Heading>
-                  <Heading size='6'>{((data.tangency_portfolio.return - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
+                  <Heading size='6'>{((data.tangency_portfolio.return_ - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
                 </div>
               </Flex>
             </Flex>

@@ -10,12 +10,6 @@ const colors = [blue, indigo, jade, cyan, sky, iris, grass, teal]
 
 const tangentPortfolioColour = '#FFF'
 
-type TangencyPortfolio = {
-  weights: number[]
-  return: number
-  risk: number
-}
-
 export default function ChartJSChart({
   mptData,
   riskFreeRate,
@@ -24,7 +18,7 @@ export default function ChartJSChart({
 }: {
   mptData: MPTData
   riskFreeRate: number
-  tangencyPortfolio: TangencyPortfolio
+  tangencyPortfolio: MPTData['tangency_portfolio']
   allowShortSelling: boolean
 }) {
   const data = mptData.efficient_frontier
