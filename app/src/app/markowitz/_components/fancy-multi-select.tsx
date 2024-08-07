@@ -81,7 +81,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
         <Button size='1' style={{ width: 120 }} onClick={() => setSelected(getRandomElements(assets, 30))}>
           <ShuffleIcon /> Randomize
         </Button>
-        <Button size='1' style={{ width: 120, color: 'var(--red-9)' }} onClick={() => setSelected([])} variant='outline' color='gray'>
+        <Button size='1' style={{ width: 120 }} className="!text-red-400 dark:hover:!bg-red-500/20 !bg-neutral-200/10  !border-neutral-700" onClick={() => setSelected([])} variant='surface' color='gray'>
           <Trash2 size={12} /> Clear
         </Button>
       </Flex>

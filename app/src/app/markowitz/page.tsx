@@ -31,7 +31,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   if (!success) {
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
-    getRandomElements(assets, 30).forEach((asset) => params.append('assets', asset))
+    getRandomElements(assets,40).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
@@ -232,7 +232,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
             </Flex>
             <Suspense>
               <Heading size='4'>Tangency Portfolio Weights</Heading>
-              <TangencyPortfolioPieChart mptData={data} />
+              <TangencyPortfolioPieChart mptData={data} pageParams={pageParams}/>
             </Suspense>
           </>
         )}

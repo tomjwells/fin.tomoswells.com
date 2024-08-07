@@ -6,21 +6,22 @@ import { Bar } from 'react-chartjs-2';
 import { Chart, BarElement, BarController, CategoryScale, LinearScale } from 'chart.js';
 import { getRandomColor } from './ChartJSChart';
 import type { MPTData } from '../page'
+import { tickers } from '~/data'
+
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale);
 
-export default function TangencyPortfolioPieChart({ mptData }: { mptData: MPTData }) {
-  const {tickers, tangency_portfolio: tangencyPortfolio} = mptData
+export default function TangencyPortfolioPieChart({ mptData,pageParams }: { mptData: MPTData; pageParams: PageParams }) {
 
   // Prepare the data for the bar chart
   const chartData = {
-    labels: tickers,
+    labels: mptData.tickers,
     datasets: [
       {
         label: 'Weighting',
-        data: tangencyPortfolio.weights,
-        borderColor: tickers.map((ticker) => getRandomColor(ticker)),
-        backgroundColor: tickers.map((ticker) => getRandomColor(ticker)),
+        data: mptData.tangency_portfolio.weights,
+        borderColor: mptData.tickers.map((ticker) => getRandomColor(ticker)),
+        backgroundColor: mptData.tickers.map((ticker) => getRandomColor(ticker)),
       },
     ],
   }
@@ -56,18 +57,30 @@ export default function TangencyPortfolioPieChart({ mptData }: { mptData: MPTDat
       <Table.Root>
         <Table.Header>
           <Table.Row>
-            <Table.ColumnHeaderCell>Ticker</Table.ColumnHeaderCell>
-            <Table.ColumnHeaderCell>Portfolio Weighting</Table.ColumnHeaderCell>
+            <Table.ColumnHeaderCell>Asset</Table.ColumnHeaderCell>
+            <Table.ColumnHeaderCell>Portfolio Weight</Table.ColumnHeaderCell>
+            <Table.ColumnHeaderCell>Expected Return</Table.ColumnHeaderCell>
+            <Table.ColumnHeaderCell>Standard Deviation</Table.ColumnHeaderCell>
+            <Table.ColumnHeaderCell>Sharpe Ratio</Table.ColumnHeaderCell>
           </Table.Row>
         </Table.Header>
 
         <Table.Body>
-          {tickers.map((ticker, index) => (
-            <Table.Row key={ticker}>
-              <Table.RowHeaderCell>{ticker}</Table.RowHeaderCell>
-              <Table.Cell>{(100 * tangencyPortfolio.weights[index]!).toFixed(2)}%</Table.Cell>
-            </Table.Row>
-          ))}
+          {mptData.asset_datapoints
+            .map((asset_datapoint, index) => ({
+              asset_datapoint,
+              weight: mptData.tangency_portfolio.weights[index]!,
+            }))
+            .sort((a, b) => b.weight - a.weight) // Sort by weight in descending order
+            .map(({ asset_datapoint, weight }) => (
+              <Table.Row key={asset_datapoint.ticker}>
+                <Table.RowHeaderCell>{tickers[asset_datapoint.ticker]?.longName || asset_datapoint.ticker}</Table.RowHeaderCell>
+                <Table.Cell>{(100 * weight).toFixed(2)}%</Table.Cell>
+                <Table.Cell>{(100*asset_datapoint.return).toFixed(2)}%</Table.Cell>
+                <Table.Cell>{(100*asset_datapoint.risk).toFixed(2)}%</Table.Cell>
+                <Table.Cell>{((asset_datapoint.risk-pageParams.r)/(asset_datapoint.risk-0)).toFixed(2)}%</Table.Cell>
+              </Table.Row>
+            ))}
         </Table.Body>
       </Table.Root>
     </>

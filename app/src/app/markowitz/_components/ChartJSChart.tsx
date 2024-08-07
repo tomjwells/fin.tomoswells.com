@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use client'
 import React from 'react'
+import { tickers } from '~/data'
 import type { MPTData } from '../page'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, ScatterController } from 'chart.js'
 import { Line } from 'react-chartjs-2'
@@ -75,7 +76,8 @@ export default function ChartJSChart({
           th.appendChild(document.createTextNode('Efficient Frontier'))
         } else {
           if (tooltip.dataPoints[0]?.raw.status) {
-            th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.status))
+            // + ` (${tooltip.dataPoints[0]?.raw.status})`
+            th.appendChild(document.createTextNode(tickers[tooltip.dataPoints[0]?.raw.status]? tickers[tooltip.dataPoints[0]?.raw.status].longName  : tooltip.dataPoints[0]?.raw.status))
           } else if (tooltip.dataPoints[0]?.raw.title) {
             th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.title))
           } else {
