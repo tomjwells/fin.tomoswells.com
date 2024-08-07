@@ -76,9 +76,9 @@ export default function TangencyPortfolioPieChart({ mptData,pageParams }: { mptD
               <Table.Row key={asset_datapoint.ticker}>
                 <Table.RowHeaderCell>{tickers[asset_datapoint.ticker]?.longName || asset_datapoint.ticker}</Table.RowHeaderCell>
                 <Table.Cell>{(100 * weight).toFixed(2)}%</Table.Cell>
-                <Table.Cell>{(100*asset_datapoint.return).toFixed(2)}%</Table.Cell>
-                <Table.Cell>{(100*asset_datapoint.risk).toFixed(2)}%</Table.Cell>
-                <Table.Cell>{((asset_datapoint.risk-pageParams.r)/(asset_datapoint.risk-0)).toFixed(2)}%</Table.Cell>
+                <Table.Cell>{(100*asset_datapoint.return).toFixed(1)}%</Table.Cell>
+                <Table.Cell>{(100*asset_datapoint.risk).toFixed(1)}%</Table.Cell>
+                <Table.Cell>{((asset_datapoint.return-pageParams.r)/(asset_datapoint.risk-0)).toFixed(2)}</Table.Cell>
               </Table.Row>
             ))}
         </Table.Body>
