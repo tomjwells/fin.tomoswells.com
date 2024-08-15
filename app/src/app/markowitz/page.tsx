@@ -31,7 +31,7 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
   if (!success) {
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
-    getRandomElements(assets,40).forEach((asset) => params.append('assets', asset))
+    getRandomElements(assets, 40).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
@@ -44,15 +44,15 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
       <Flex direction='column' gap='2' mb='4'>
         <Heading size='6'>Modern Portfolio Theory</Heading>
         <Text size='1'>
-          The formulae used in this implementation of Markowtiz’s Modern Portfolio Theory (MPT) are derived in{' '}
+          Derivations of the formulae used in this implementation of Markowtiz’s Modern Portfolio Theory (MPT) are provided in{' '}
           <Link asChild>
-            <NextLink target='_blank' href={`https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf`}>
+            <NextLink target='_blank' href='https://github.com/tomjwells/finance/blob/master/mathematics/Markowitz_Theory.pdf'>
               this document
             </NextLink>
           </Link>
-          . Their implementation in Python is available{' '}
+          . Their Python implementation is available{' '}
           <Link asChild>
-            <NextLink target='_blank' href={`https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py`}>
+            <NextLink target='_blank' href='https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py'>
               here
             </NextLink>
           </Link>
@@ -232,7 +232,7 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
             </Flex>
             <Suspense>
               <Heading size='4'>Tangency Portfolio Weights</Heading>
-              <TangencyPortfolioPieChart mptData={data} pageParams={pageParams}/>
+              <TangencyPortfolioPieChart mptData={data} pageParams={pageParams} />
             </Suspense>
           </>
         )}

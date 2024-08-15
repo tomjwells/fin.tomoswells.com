@@ -6,11 +6,70 @@ import numpy.typing as npt
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
-# Switch to True to show the progress of the optimization in the server logs
+# Switch to True to display the convex optimization progress in the server logs
 solvers.options['show_progress'] = False if os.environ.get("DEBUG") else False
 
 
-def main(tickers: List[str], rets: npt.NDArray[np.float64], allowShortSelling: bool, R_f: float):
+class EfficientFrontierPoint(TypedDict):
+  return_: float
+  risk: float
+  weights: List[float]
+
+
+class AssetDatapoint(TypedDict):
+  ticker: str
+  return_: float
+  risk: float
+
+
+class TangencyPortfolio(TypedDict):
+  return_: npt.NDArray[np.float64]
+  risk: npt.NDArray[np.float64]
+  weights: List[float]
+
+
+TangencyPortfolio = TypedDict('TangencyPortfolio', {
+    'return_': npt.NDArray[np.float64],
+    'risk': npt.NDArray[np.float64],
+    'weights': List[float]
+})
+
+
+class MainReturnType(TypedDict):
+  tickers: List[str]
+  efficient_frontier: List[EfficientFrontierPoint]
+  asset_datapoints: List[AssetDatapoint]
+  tangency_portfolio: TangencyPortfolio
+  sortino_variance: np.float64
+
+
+def main(
+    tickers: List[str],
+    rets: npt.NDArray[np.float64],
+    allowShortSelling: bool, R_f: float
+) -> MainReturnType:
+  """Calculate the efficient frontier, tangency portfolio, and Sortino variance for an input set of asset returns.
+
+    This function computes the efficient frontier, tangency portfolio, and Sortino variance for a given set of asset returns.
+    Both scenarios where short selling is allowed and disallowed are supported.
+
+    Parameters
+    ----------
+    tickers: List of asset tickers.
+    rets: 2D numpy array of daily returns for each asset.
+    allowShortSelling: Boolean indicating if short selling is allowed.
+    R_f: Risk-free rate.
+
+    Returns
+    -------
+    MainReturnType
+        A dictionary containing:
+        - tickers: List of asset tickers.
+        - efficient_frontier: List of dictionaries with return, risk, and weights for each point on the efficient frontier.
+        - asset_datapoints: List of dictionaries with ticker, return, and risk for each asset.
+        - tangency_portfolio: Dictionary with return, risk, and weights of the tangency portfolio.
+        - sortino_variance: Sortino variance of the tangency portfolio.
+    """
 
   # Notation: rets are daily, mu and Sigma are annualized
   mu: npt.NDArray = 252 * np.nanmean(rets, axis=0)
@@ -34,8 +93,8 @@ def main(tickers: List[str], rets: npt.NDArray[np.float64], allowShortSelling: b
 
   return {
       "tickers": tickers,
-      "efficient_frontier": [{"return": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i].tolist()} for i in range(len(R_p_linspace))],
-      "asset_datapoints": [{"ticker": ticker, "return": ret, "risk": risk} for ticker, ret, risk in zip(tickers, mu, np.sqrt(np.diag(Sigma)))],
+      "efficient_frontier": [{"return_": R_p_linspace[i], "risk": sigma_p[i], "weights": weights[i].tolist()} for i in range(len(R_p_linspace))],
+      "asset_datapoints": [{"ticker": ticker, "return_": ret, "risk": risk} for ticker, ret, risk in zip(tickers, mu, np.sqrt(np.diag(Sigma)))],
       "tangency_portfolio": tangency_portfolio,
       "sortino_variance": sortino_variance
   }
@@ -57,12 +116,13 @@ def efficient_frontier(
   f = ones.T @ inv_Sigma_at_ones
   d = a * f - c ** 2
   one_over_d = 1 / d
-  risk = np.sqrt(one_over_d * (f * (R_p_linspace ** 2) - 2 * c * R_p_linspace + a))
 
-  # Vectorized calculation (over the linspace of returns) of the portfolio weights along the efficient frontier
+  # Vectorized calculation (over the linspace of returns) of portfolio weights along the efficient frontier
   lambda_1 = + one_over_d * (f * R_p_linspace - c)
   lambda_2 = - one_over_d * (c * R_p_linspace - a)
-  weights = lambda_1[:, None] * (inv_Sigma_at_mu) + lambda_2[:, None] * (inv_Sigma_at_ones)
+
+  weights = lambda_1[:, None] * inv_Sigma_at_mu + lambda_2[:, None] * inv_Sigma_at_ones
+  risk = np.sqrt(one_over_d * (f * (R_p_linspace ** 2) - 2 * c * R_p_linspace + a))
 
   return weights, risk
 
@@ -103,6 +163,21 @@ def efficient_frontier_numerical(
     Sigma: npt.NDArray[np.float64],
     R_p_linspace: npt.NDArray[np.float64]
 ) -> Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+  """Calculate the efficient frontier numerically using convex optimization.
+
+  This function computes the efficient frontier, in the case that short selling is not allowed, using convex optimization.
+
+  Parameters
+  ----------
+  mu : The expected returns of the assets.
+  Sigma : The covariance matrix of the assets.
+  R_p_linspace : The linspace of expected returns for the efficient frontier.
+
+  Returns
+  -------
+  Tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]
+      A tuple containing the weights and risks of the portfolios on the efficient frontier.
+  """
   N = len(mu)  # The number of assets in a portfolio
 
   # Quadratic term
@@ -129,18 +204,6 @@ def efficient_frontier_numerical(
   return weights, risks
 
 
-class TangencyPortfolio(TypedDict):
-  return_: npt.NDArray[np.float64]
-  risk: npt.NDArray[np.float64]
-  weights: List[float]
-
-
-TangencyPortfolio = TypedDict('TangencyPortfolio', {
-    'return_': npt.NDArray[np.float64],
-    'risk': npt.NDArray[np.float64],
-    'weights': List[float]
-})
-
 def find_tangency_portfolio(
     mu: npt.NDArray[np.float64],
     Sigma: npt.NDArray[np.float64],
@@ -149,9 +212,9 @@ def find_tangency_portfolio(
     allow_short_selling: bool = False
 ) -> TangencyPortfolio:
   """
-  Function to find the tangency portfolio
-  If short selling is allowed, the analytic solution is used
-  If short selling is not allowed, a quadratic programming method is used
+  Function to find the tangency portfolio.
+  If short selling is allowed, the analytic solution is used.
+  If short selling is not allowed, a quadratic programming method is used.
   """
 
   N = len(mu)
