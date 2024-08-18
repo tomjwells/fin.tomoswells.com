@@ -136,7 +136,7 @@ const MPTSchema = z.object({
   ),
   tangency_portfolio: z.object({
     weights: z.array(z.number()),
-    return: z.number(),
+    return_: z.number(),
     risk: z.number(),
   }),
   sortino_variance: z.number(),
