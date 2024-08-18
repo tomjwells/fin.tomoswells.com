@@ -166,7 +166,7 @@ async function fetchMPT(pageParams: PageParams) {
       return MPTSchema.parse(await response.json())
     } catch (error) {
       console.error(JSON.stringify(error))
-      const response2 = await fetch(`${env.APP_URL}/api/tg/${encodeURIComponent(fetchURL + ' ' + JSON.stringify(error))}`)
+      void fetch(`${env.APP_URL}/api/tg/${encodeURIComponent(fetchURL + ' ' + JSON.stringify(error))}`)
       throw new Error('Failed to fetch MPT data')
     }
   } else {

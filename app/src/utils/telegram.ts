@@ -14,7 +14,7 @@ class TGLogBot<T> {
     try {
       await this.tg.sendMessage(env.TELEGRAM_CHAT_ID, message)
     } catch (e) {
-      if (e.message === 'message is too long') {
+      if (e instanceof Error && e.message === 'message is too long') {
         const chunks = message.match(/.{1,4096}/g)
         if (chunks) {
           for (const chunk of chunks) {
