@@ -30,7 +30,7 @@ export default function ChartJSChart({
   const X_MAX = 0.7
   const Y_MIN = -0.2
   // const Y_MAX = Math.min(0.1 + Math.max(...mptData.asset_datapoints.map((d) => d.return), tangencyPortfolio.return_), 0.8)
-  const Y_MAX = 0.2 + Math.max(...mptData.asset_datapoints.map((d) => d.return)) // Best not to include tangencyPortfolio.return_ here since it can take on large values for certain portfolios
+  const Y_MAX = 0.2 + Math.max(...mptData.asset_datapoints.map((d) => d.return_)) // Best not to include tangencyPortfolio.return_ here since it can take on large values for certain portfolios
   // const Y_MAX = 0.7
   console.log({ X_MAX, X_MIN, Y_MAX, Y_MIN, x: tangencyPortfolio.risk, y: tangencyPortfolio.return_ })
 
@@ -77,7 +77,7 @@ export default function ChartJSChart({
         } else {
           if (tooltip.dataPoints[0]?.raw.status) {
             // + ` (${tooltip.dataPoints[0]?.raw.status})`
-            th.appendChild(document.createTextNode(tickers[tooltip.dataPoints[0]?.raw.status]? tickers[tooltip.dataPoints[0]?.raw.status].longName  : tooltip.dataPoints[0]?.raw.status))
+            th.appendChild(document.createTextNode(tickers[tooltip.dataPoints[0]?.raw.status] ? tickers[tooltip.dataPoints[0]?.raw.status].longName : tooltip.dataPoints[0]?.raw.status))
           } else if (tooltip.dataPoints[0]?.raw.title) {
             th.appendChild(document.createTextNode(tooltip.dataPoints[0]?.raw.title))
           } else {
@@ -247,8 +247,8 @@ export default function ChartJSChart({
       {
         label: 'Efficient frontier',
         data: data
-          .filter((d) => d.return >= minRiskDataPoint.return)
-          .map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
+          .filter((d) => d.return_ >= minRiskDataPoint.return_)
+          .map((d) => ({ x: d.risk, y: d.return_, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
         borderColor: 'white',
         backgroundColor: 'transparent',
         pointBackgroundColor: 'white',
@@ -266,8 +266,8 @@ export default function ChartJSChart({
         label: 'Inefficient frontier',
         hidden: !allowShortSelling,
         data: data
-          .filter((d) => d.return <= minRiskDataPoint.return)
-          .map((d) => ({ x: d.risk, y: d.return, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
+          .filter((d) => d.return_ <= minRiskDataPoint.return_)
+          .map((d) => ({ x: d.risk, y: d.return_, weights: d.weights.reduce((acc, w, i) => ({ ...acc, [`${mptData.tickers[i]}`]: w }), {}) })),
         borderColor: 'white',
         backgroundColor: 'transparent',
         pointBackgroundColor: 'white',
@@ -288,7 +288,7 @@ export default function ChartJSChart({
 
         return {
           label: d.ticker,
-          data: [{ x: d.risk, y: d.return, status: d.ticker }], // replace with your actual data
+          data: [{ x: d.risk, y: d.return_, status: d.ticker }], // replace with your actual data
           type: 'scatter', // set type to scatter
           mode: 'markers',
           backgroundColor: 'blue', // customize as needed

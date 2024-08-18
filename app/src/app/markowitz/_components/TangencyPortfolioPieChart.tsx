@@ -1,18 +1,16 @@
-"use client"
+'use client'
 
-import { Table } from '@radix-ui/themes';
-import { PageParams } from '../page';
-import { Bar } from 'react-chartjs-2';
-import { Chart, BarElement, BarController, CategoryScale, LinearScale } from 'chart.js';
-import { getRandomColor } from './ChartJSChart';
+import { Table } from '@radix-ui/themes'
+import { PageParams } from '../page'
+import { Bar } from 'react-chartjs-2'
+import { Chart, BarElement, BarController, CategoryScale, LinearScale } from 'chart.js'
+import { getRandomColor } from './ChartJSChart'
 import type { MPTData } from '../page'
 import { tickers } from '~/data'
 
+Chart.register(BarController, BarElement, CategoryScale, LinearScale)
 
-Chart.register(BarController, BarElement, CategoryScale, LinearScale);
-
-export default function TangencyPortfolioPieChart({ mptData,pageParams }: { mptData: MPTData; pageParams: PageParams }) {
-
+export default function TangencyPortfolioPieChart({ mptData, pageParams }: { mptData: MPTData; pageParams: PageParams }) {
   // Prepare the data for the bar chart
   const chartData = {
     labels: mptData.tickers,
@@ -76,9 +74,9 @@ export default function TangencyPortfolioPieChart({ mptData,pageParams }: { mptD
               <Table.Row key={asset_datapoint.ticker}>
                 <Table.RowHeaderCell>{tickers[asset_datapoint.ticker]?.longName || asset_datapoint.ticker}</Table.RowHeaderCell>
                 <Table.Cell>{(100 * weight).toFixed(2)}%</Table.Cell>
-                <Table.Cell>{(100*asset_datapoint.return).toFixed(1)}%</Table.Cell>
-                <Table.Cell>{(100*asset_datapoint.risk).toFixed(1)}%</Table.Cell>
-                <Table.Cell>{((asset_datapoint.return-pageParams.r)/(asset_datapoint.risk-0)).toFixed(2)}</Table.Cell>
+                <Table.Cell>{(100 * asset_datapoint.return_).toFixed(1)}%</Table.Cell>
+                <Table.Cell>{(100 * asset_datapoint.risk).toFixed(1)}%</Table.Cell>
+                <Table.Cell>{((asset_datapoint.return_ - pageParams.r) / (asset_datapoint.risk - 0)).toFixed(2)}</Table.Cell>
               </Table.Row>
             ))}
         </Table.Body>
@@ -86,4 +84,3 @@ export default function TangencyPortfolioPieChart({ mptData,pageParams }: { mptD
     </>
   )
 }
-

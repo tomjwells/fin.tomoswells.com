@@ -12,14 +12,15 @@ const config = {
   rewrites: async () => {
     return [
       {
+        source: '/api/tg/:path*',
+        destination: '/api/tg/:path*',
+      },
+      {
         source: '/api/:path*',
-        destination:
-          process.env.NODE_ENV === 'development'
-            ? 'http://127.0.0.1:8000/api/:path*'
-            : `${process.env.API_URL}/api/:path*`,
+        destination: process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:8000/api/:path*' : `${process.env.API_URL}/api/:path*`,
       },
     ]
   },
 }
 
-export default config;
+export default config

@@ -26,7 +26,7 @@ export type PageParams = z.infer<typeof pageParamsSchema>
 
 const formatPercent = (num: number) => `${(100 * num).toFixed(1)}%`
 
-export default async function MPTPage({ params, searchParams }: { params: { slug: string }; searchParams?: Record<string, string | string[] | undefined> }) {
+export default async function MPTPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const { data: pageParams, success } = pageParamsSchema.safeParse(searchParams)
   if (!success) {
     const params = new URLSearchParams()
@@ -123,20 +123,20 @@ const MPTSchema = z.object({
   efficient_frontier: z.array(
     z.object({
       weights: z.array(z.number()),
-      return: z.number(),
+      return_: z.number(),
       risk: z.number(),
     })
   ),
   asset_datapoints: z.array(
     z.object({
       ticker: z.string(),
-      return: z.number(),
+      return_: z.number(),
       risk: z.number(),
     })
   ),
   tangency_portfolio: z.object({
     weights: z.array(z.number()),
-    return_: z.number(),
+    return: z.number(),
     risk: z.number(),
   }),
   sortino_variance: z.number(),
@@ -159,9 +159,16 @@ async function fetchMPT(pageParams: PageParams) {
       return ctrl.signal
     }
 
-    console.log({ fetching: `${env.APP_URL}/api/markowitz/main?${queryParams}` })
-    const response = await fetch(`${env.APP_URL}/api/markowitz/main?${queryParams}`, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 }, signal: AbortSignal.timeout(60_000) })
-    return MPTSchema.parse(await response.json())
+    const fetchURL = `${env.APP_URL}/api/markowitz/main?${queryParams}`
+    console.log({ fetching: fetchURL })
+    const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 }, signal: AbortSignal.timeout(60_000) })
+    try {
+      return MPTSchema.parse(await response.json())
+    } catch (error) {
+      console.error(JSON.stringify(error))
+      const response2 = await fetch(`${env.APP_URL}/api/tg/${encodeURIComponent(fetchURL + ' ' + JSON.stringify(error))}`)
+      throw new Error('Failed to fetch MPT data')
+    }
   } else {
     return {
       tickers: [],

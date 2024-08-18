@@ -9,6 +9,8 @@ export const env = createEnv({
     TURSO_DATABASE_URL: z.string().url(),
     TURSO_AUTH_TOKEN: z.string(),
     HOME_UID: z.string(),
+    TELEGRAM_BOT_TOKEN: z.string(),
+    TELEGRAM_CHAT_ID: z.string(),
   },
   experimental__runtimeEnv: {},
   emptyStringAsUndefined: true,
