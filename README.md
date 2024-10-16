@@ -21,7 +21,7 @@ The following methods are applied to the pricing of American options:
 
 # Modern Portfolio Theory ([link](https://fin.tomoswells.com/markowitz))
 
-The formulae used to find the efficient frontier analytically are derived in [Markowitz_Theory.pdf](https://github.com/tomjwells/finance/blob/master/modules/markowitz/Markowitz_Theory.pdf).
+The formulae used to find the efficient frontier analytically are derived in [Markowitz_Theory.pdf](https://github.com/tomjwells/fin.tomoswells.com/blob/master/mathematics/Markowitz_Theory.pdf).
 
 Python code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
 
