@@ -4,14 +4,6 @@ A collection of tools I have created while studying financial mathematics.
 
 The goal is to produce a collection of interactive demos based of concepts in mathematical finance, which can be tried out and tested at [fin.tomoswells.com](https://fin.tomoswells.com).
 
-# Repository Structure
-
-Each subdirectory of this repository serves a different purpose. Understanding the structure will help you quickly find any code you are interested in:
-
-1. `modules` - Contains the Python functions/algorithms implementing the financial calculations.
-1. `app` - Hosts a Next.js frontend for the application.
-2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
-
 # Options Pricing ([link](https://fin.tomoswells.com/derivatives))
 
 The options pricing page applies various pricing techniques to the pricing of European and American options.
@@ -59,5 +51,13 @@ making it accessible on port `8000`.
 
 To install dependencies use the alias `i`. To run the application, use the alias `r`.
 
-## Contact
+# Repository Structure
+
+Each subdirectory of this repository serves a different purpose. Understanding the structure will help you quickly find any code you are interested in:
+
+1. `modules` - Contains the Python functions/algorithms implementing the financial calculations.
+1. `app` - Hosts a Next.js frontend for the application.
+2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
+
+# Contact
 If you have any questions or suggestions, please feel free to get in touch.
