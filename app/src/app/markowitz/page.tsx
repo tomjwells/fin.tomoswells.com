@@ -98,7 +98,7 @@ export default async function MPTPage({ searchParams }: { searchParams?: Record<
         </Flex>
 
         <Flex direction='column' gap='2' className='my-4'>
-          <Text>The efficient frontier (the set of portfolios that yield the highest return for a given level of risk) is indicated by the solid white line.</Text>
+          <Text>The efficient frontier, or set of efficient portfolios is indicated by the solid white line. These portfolios are "efficient"/optimal in the sense that they achieve the minimized risk (volatility) for a given level of expected return.</Text>
         </Flex>
 
         <Heading size='5' mt='4'>
