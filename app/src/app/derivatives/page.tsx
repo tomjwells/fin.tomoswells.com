@@ -50,23 +50,31 @@ type OptionPriceParams = PageParams & {
   instrument: 'call' | 'put'
 }
 
-export default async function MPTPage({ params, searchParams }: { params: { slug: string }; searchParams: Record<string, string | string[] | undefined> }) {
-  const ticker = pageParamsSchema.shape.ticker.safeParse(searchParams.ticker).success ? (searchParams?.ticker as PageParams['ticker']) : 'TSLA'
+export default async function MPTPage({ params, searchParams }: { params: { slug: string }; searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const resolvedSearchParams = await searchParams;
+  const ticker = pageParamsSchema.shape.ticker.safeParse(resolvedSearchParams.ticker).success ? (resolvedSearchParams?.ticker as PageParams['ticker']) : 'TSLA'
+  
   // Validate query params
-  if (!pageParamsSchema.safeParse(searchParams).success)
+  if (!pageParamsSchema.safeParse(resolvedSearchParams).success){
+
+    console.log({
+      searchParams: resolvedSearchParams,
+      ticker
+    })
     redirect(
       `?${new URLSearchParams({
-        optionType: pageParamsSchema.shape.optionType.safeParse(searchParams.optionType).success ? (searchParams?.optionType as PageParams['optionType']) : 'european',
-        T: pageParamsSchema.shape.T.safeParse(searchParams.T).success
-          ? (searchParams?.T as PageParams['T'])
-          : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
+        optionType: pageParamsSchema.shape.optionType.safeParse(resolvedSearchParams.optionType).success ? (resolvedSearchParams?.optionType as PageParams['optionType']) : 'european',
+        T: pageParamsSchema.shape.T.safeParse(resolvedSearchParams.T).success
+        ? (resolvedSearchParams?.T as PageParams['T'])
+        : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
         ticker,
-        K: pageParamsSchema.shape.K.safeParse(searchParams.K).success ? (searchParams?.K as PageParams['K']) : (await fetchUnderlyingPrice(ticker)).toFixed(0),
-        R_f: pageParamsSchema.shape.R_f.safeParse(searchParams.R_f).success ? (searchParams?.R_f as PageParams['R_f']) : (await fetchRiskFreeRate).toString(),
+        K: pageParamsSchema.shape.K.safeParse(resolvedSearchParams.K).success ? (resolvedSearchParams?.K as PageParams['K']) : (await fetchUnderlyingPrice(ticker)).toFixed(0),
+        R_f: pageParamsSchema.shape.R_f.safeParse(resolvedSearchParams.R_f).success ? (resolvedSearchParams?.R_f as PageParams['R_f']) : (await fetchRiskFreeRate).toString(),
       })}`
     )
+  }
 
-  const pageParams = pageParamsSchema.parse(searchParams)
+  const pageParams = pageParamsSchema.parse(resolvedSearchParams)
 
   const methods = pageParams.optionType === 'european' ? ([METHODS[0], METHODS[1], METHODS[2]] as Method[]) : ([METHODS[2]] as Method[])
 
@@ -80,10 +88,10 @@ export default async function MPTPage({ params, searchParams }: { params: { slug
         <div className=' container mx-16 w-full flex  items-center justify-center py-3'>
           <Tabs defaultValue='/derivatives?optionType=european' className='w-[400px]'>
             <TabsList>
-              <TabsTrigger value={`/derivatives?${new URLSearchParams({ ...searchParams, optionType: 'european' })}`} selected={pageParams.optionType === 'european'}>
+              <TabsTrigger value={`/derivatives?${new URLSearchParams({ ...resolvedSearchParams, optionType: 'european' })}`} selected={pageParams.optionType === 'european'}>
                 European Option
               </TabsTrigger>
-              <TabsTrigger value={`/derivatives?${new URLSearchParams({ ...searchParams, optionType: 'american' })}`} selected={searchParams?.optionType === 'american'}>
+              <TabsTrigger value={`/derivatives?${new URLSearchParams({ ...resolvedSearchParams, optionType: 'american' })}`} selected={resolvedSearchParams?.optionType === 'american'}>
                 American Option
               </TabsTrigger>
             </TabsList>

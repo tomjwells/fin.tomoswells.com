@@ -2,6 +2,7 @@ Flask==3.0.3
 
 python-dotenv==1.0.1
 # numpy
+jax==0.5.0
 pandas==2.2.2
 # yfinance==0.2.37 # Disable in prod, to reduce function size, since it is not used
 # sqlalchemy-libsql==0.1.0

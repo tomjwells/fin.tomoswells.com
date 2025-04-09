@@ -14,10 +14,7 @@ import TangencyPortfolioPieChart from './_components/TangencyPortfolioPieChart'
 
 const pageParamsSchema = z.object({
   assets: z.array(z.string()).optional().default([]),
-  r: z.coerce
-    .number()
-    .min(0)
-    .transform((v) => (v < 0 ? 0 : v)),
+  r: z.coerce.number().min(0).transform((v) => (v < 0 ? 0 : v)),
   startYear: z.coerce.number().min(1980).max(new Date().getFullYear()),
   endYear: z.coerce.number().min(1980).max(new Date().getFullYear()),
   allowShortSelling: z.enum(['true', 'false']).transform((value) => value === 'true'),
@@ -26,9 +23,12 @@ export type PageParams = z.infer<typeof pageParamsSchema>
 
 const formatPercent = (num: number) => `${(100 * num).toFixed(1)}%`
 
-export default async function MPTPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
-  const { data: pageParams, success } = pageParamsSchema.safeParse(searchParams)
+export default async function MPTPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const resolvedSearchParams = await searchParams
+  const { data: pageParams, success } = pageParamsSchema.safeParse(resolvedSearchParams)
+
   if (!success) {
+    console.log({searchParams: resolvedSearchParams, pageParams, success}) // Log to server
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
     getRandomElements(assets, 40).forEach((asset) => params.append('assets', asset))
@@ -111,7 +111,7 @@ export default async function MPTPage({ searchParams }: { searchParams?: Record<
             </Flex>
           }
         >
-          <ResultsSection pageParams={pageParams} searchParams={searchParams} />
+          <ResultsSection pageParams={pageParams} searchParams={resolvedSearchParams} />
         </Suspense>
       </Flex>
     </Card>
