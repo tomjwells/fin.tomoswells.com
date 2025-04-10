@@ -188,9 +188,11 @@ const fetchOptionPrice = (params: OptionPriceParams) =>
   fetch(`${env.APP_URL}/api/derivatives/option-price?${new URLSearchParams(params)}`, {
     cache: 'no-store',
   }).then(async (res) => {
+    const clone = res.clone()
+
     if (!res.ok) {
       console.log('HTTP-Error: ' + res.status)
-      const message = await res.text()
+      const message = await clone.text()
       console.log({ message })
       if (message.includes('less than T')) {
         redirect(`?${new URLSearchParams({ ...params, T: new Date().getFullYear() + '-' + (new Date().getMonth() + 2).toString().padStart(2, '0') + '-01' })}`)
