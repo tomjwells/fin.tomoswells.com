@@ -23,7 +23,7 @@ export type PageParams = z.infer<typeof pageParamsSchema>
 
 const formatPercent = (num: number) => `${(100 * num).toFixed(1)}%`
 
-export default async function MPTPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+export default async function MPTPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const resolvedSearchParams = await searchParams
   const { data: pageParams, success } = pageParamsSchema.safeParse(resolvedSearchParams)
 
@@ -153,15 +153,17 @@ async function fetchMPT(pageParams: PageParams) {
     queryParams.append('allowShortSelling', pageParams.allowShortSelling.toString())
 
     // Custom timeout to allow fetch to wait longer
-    AbortSignal.timeout ??= function timeout(ms) {
-      const ctrl = new AbortController()
-      setTimeout(() => ctrl.abort(), ms)
-      return ctrl.signal
+    function timeoutSignal(ms: number): AbortSignal {
+      const controller = new AbortController()
+      setTimeout(() => controller.abort(), ms)
+      return controller.signal
     }
+    
+    
 
     const fetchURL = `${env.APP_URL}/api/markowitz/main?${queryParams}`
     console.log({ fetching: fetchURL })
-    const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 }, signal: AbortSignal.timeout(60_000) })
+    const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 }, signal: timeoutSignal(60_000) })
     try {
       return MPTSchema.parse(await response.json())
     } catch (error) {
@@ -263,9 +265,9 @@ async function ResultsSection({ pageParams, searchParams }: { pageParams: PagePa
 }
 
 function getRandomElements(arr: string[], count: number): string[] {
-  let result: Set<string> = new Set()
+  const result = new Set<string>()
   while (result.size < count && result.size < arr.length) {
-    let randomIndex = Math.floor(Math.random() * arr.length)
+    const randomIndex = Math.floor(Math.random() * arr.length)
     result.add(arr[randomIndex] || '')
   }
   return Array.from(result)

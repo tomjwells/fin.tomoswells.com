@@ -1,5 +1,6 @@
-export const tickers: {
-  [key: string]: {
+export const tickers: Record<
+  string,
+  {
     longName: string
     sector: string
     subSector: string
@@ -8,7 +9,7 @@ export const tickers: {
     CIK: string
     founded: string
   }
-} = {
+> = {
   MMM: {
     longName: '3M',
     sector: 'Industrials',

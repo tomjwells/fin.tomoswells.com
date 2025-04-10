@@ -1,6 +1,6 @@
-import { Box, Card, Flex, Heading, Text, Link as RadixLink, Spinner } from "@radix-ui/themes"
-import { Table } from '@radix-ui/themes';
-import Link from "next/link";
+import { Card, Flex, Heading, Text, Link as RadixLink, } from "@radix-ui/themes"
+import { Table } from '@radix-ui/themes'
+import Link from "next/link"
 
 type Result = {
   model: string;
@@ -46,13 +46,7 @@ const results: Result[] = [
   },
 ]
 
-export default async function MPTPage({
-  params,
-  searchParams,
-}: {
-  params: { slug: string }
-  searchParams?: Record<string, string | string[] | undefined>
-}) {
+export default async function MPTPage() {
 
   return <Card className="w-full before:![background-color:transparent] !p-5"  >
     <Heading size="6">Timeseries Forecasting (WIP)</Heading>

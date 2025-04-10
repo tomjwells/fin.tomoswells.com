@@ -10,7 +10,7 @@ import { Calendar } from '~/shadcn/Calendar'
 import { Flex } from '@radix-ui/themes'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { formatISO } from 'date-fns'
-import { PageParams } from '../page'
+import type { PageParams } from '../page'
 
 export default function SelectExpirationDate(pageParams: PageParams) {
   const router = useRouter()

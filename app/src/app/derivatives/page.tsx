@@ -50,8 +50,8 @@ type OptionPriceParams = PageParams & {
   instrument: 'call' | 'put'
 }
 
-export default async function MPTPage({ params, searchParams }: { params: { slug: string }; searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
-  const resolvedSearchParams = await searchParams;
+export default async function MPTPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const resolvedSearchParams = await searchParams
   const ticker = pageParamsSchema.shape.ticker.safeParse(resolvedSearchParams.ticker).success ? (resolvedSearchParams?.ticker as PageParams['ticker']) : 'TSLA'
   
   // Validate query params

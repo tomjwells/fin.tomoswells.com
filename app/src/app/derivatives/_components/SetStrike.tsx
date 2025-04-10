@@ -26,17 +26,20 @@ export default function SetStrike({ pageParams, currentPrice }: { pageParams: Pa
             if (timer) {
               clearTimeout(timer)
             }
-
-            if (e.target?.value)
+            
+            const value = e.target?.value
+            if (typeof value === 'string') {
               setTimer(
                 setTimeout(() => {
                   startTransition(() => {
                     const params = new URLSearchParams(searchParams)
-                    params.set('K', (e.target?.value).toString())
+                    params.set('K', value)
                     router.push(`?${params}`, { scroll: false })
                   })
                 }, DEBOUNCE_TIME)
               )
+            }
+            
           }}
         >
           <TextField.Slot>$</TextField.Slot>

@@ -13,9 +13,9 @@ import { Trash2 } from 'lucide-react'
 const DEBOUNCE_TIME = 150
 
 export function getRandomElements(arr: string[], count: number): string[] {
-  let result: Set<string> = new Set()
+  const result = new Set<string>()
   while (result.size < count && result.size < arr.length) {
-    let randomIndex = Math.floor(Math.random() * arr.length)
+    const randomIndex = Math.floor(Math.random() * arr.length)
     result.add(arr[randomIndex] || '')
   }
   return Array.from(result)
@@ -49,9 +49,7 @@ export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: s
     )
   }
 
-  React.useEffect(() => {
-    !open && update()
-  }, [open, selected])
+  React.useEffect(() => { void (!open && update()) }, [open, selected])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const input = inputRef.current
