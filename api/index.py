@@ -67,6 +67,7 @@ def markowitz_main():
   end_date = datetime.now().strftime('%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
   columns = ['Date'] + assets
+  db_start_time = time.time()
   con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
   # Python's isidentifier is used to prevent SQL injection
   query = f"SELECT {', '.join([f'`{col}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
@@ -74,6 +75,8 @@ def markowitz_main():
       con.execute(query, (start_date, end_date)).fetchall(),
       columns=columns
   ).set_index('Date')
+  db_duration = time.time() - db_start_time
+  print("DB Query Time: {:.4f}s".format(db_duration))  
   # rets = pd.read_csv('rets.csv',  index_col='Date', parse_dates=["Date"], usecols=columns).loc[start_date:end_date]
 
   # Verify all columns contain numbers, if not we discard the column
@@ -160,64 +163,75 @@ def download_data(ticker: str) -> pd.Series:
 
 
 # Route for option-price
-
 @app.route("/api/derivatives/option-price")
 def get_option_price():
-  option_type = request.args.get('optionType')
-  assert option_type in ['european', 'american'], "option_type should be either 'european' or 'american'"
-  method = request.args.get('method')
-  assert method in ['binomial', 'black-scholes', 'monte-carlo', "longstaff-schwartz"], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
-  instrument: Literal['call', 'put'] = request.args.get('instrument')
-  assert instrument in ['call', 'put'], "instrument should be either 'call' or 'put'"
+    option_type = request.args.get('optionType')
+    assert option_type in ['european', 'american'], "option_type should be either 'european' or 'american'"
+    method = request.args.get('method')
+    assert method in ['binomial', 'black-scholes', 'monte-carlo', "longstaff-schwartz"], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
+    instrument: Literal['call', 'put'] = request.args.get('instrument')
+    assert instrument in ['call', 'put'], "instrument should be either 'call' or 'put'"
 
-  t: datetime = datetime.now()
-  T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')
-  if t > T:
-    return jsonify({"error": f"t: {t} should be less than T: {T}"}), 400
-  tau = (T - t).days / 365
-  K: float = float(request.args.get('K'))
-  assert isinstance(K, (float)), "K should be a float"
-  ticker = request.args.get('ticker') if request.args.get('ticker').isidentifier() else None
-  assert isinstance(ticker, str), "ticker should be a string"
-  R_f: float = float(request.args.get('R_f'))
+    t: datetime = datetime.now()
+    T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')
+    if t > T:
+        return jsonify({"error": f"t: {t} should be less than T: {T}"}), 400
+    tau = (T - t).days / 365
+    K: float = float(request.args.get('K'))
+    assert isinstance(K, (float)), "K should be a float"
+    ticker = request.args.get('ticker') if request.args.get('ticker').isidentifier() else None
+    assert isinstance(ticker, str), "ticker should be a string"
+    R_f: float = float(request.args.get('R_f'))
 
-  con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-  results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
-  price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
-  # price_history = pd.read_sql(f"SELECT Date, {ticker} FROM price_history", con, index_col='Date', parse_dates=["Date"])
-  S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
-  returns = price_history.pct_change()
-  sigma = np.sqrt(365) * returns.std().iloc[0]
+    # Timing the database query
+    db_start_time = time.time()
+    con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+    results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
+    price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+    db_duration = time.time() - db_start_time
+    print("DB Query Time: {:.4f}s".format(db_duration))  # Logging the DB query time
 
-  print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
-        "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
+    # Calculate initial price and volatility (sigma)
+    S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
+    returns = price_history.pct_change()
+    sigma = np.sqrt(365) * returns.std().iloc[0]
 
-  if method == 'binomial':
-    num_steps = int(1e3)
-    if option_type == 'european':
-      return jsonify(EUPrice(instrument, S_0, sigma, R_f, K, tau, num_steps))
-    elif option_type == 'american':
-      return jsonify(USPrice(instrument, S_0, sigma, R_f, K, tau, num_steps))
+    print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
+          "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
 
-  if method == 'black-scholes':
-    if option_type == 'european':
-      bs = black_scholes_option(S_0, K, tau, R_f, sigma)
-      return jsonify(bs.value(instrument))
-    if option_type == 'american':
-      return jsonify({"error": "American options are not supported"})
+    # Timing the option price calculation
+    calc_start_time = time.time()
+    if method == 'binomial':
+        num_steps = int(1e3)
+        if option_type == 'european':
+            result = EUPrice(instrument, S_0, sigma, R_f, K, tau, num_steps)
+        elif option_type == 'american':
+            result = USPrice(instrument, S_0, sigma, R_f, K, tau, num_steps)
 
-  if method == 'monte-carlo':
-    num_trials = int(1e5)
-    num_timesteps = 100
-    if option_type == 'european':
-      return jsonify(monte_carlo(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))
-    elif option_type == 'american':
-      return jsonify({"error": "American options are not supported"})
+    elif method == 'black-scholes':
+        if option_type == 'european':
+            bs = black_scholes_option(S_0, K, tau, R_f, sigma)
+            result = bs.value(instrument)
+        elif option_type == 'american':
+            result = {"error": "American options are not supported"}
 
-  if method == 'longstaff-schwartz':
-    num_trials = int(1e5)
-    num_timesteps = 100
-    if option_type == 'european':
-      return jsonify({"error": "European options are not supported"})
-    elif option_type == 'american':
-      return jsonify(longstaff_schwartz(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6))))
+    elif method == 'monte-carlo':
+        num_trials = int(1e5)
+        num_timesteps = 100
+        if option_type == 'european':
+            result = monte_carlo(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6)))
+        elif option_type == 'american':
+            result = {"error": "American options are not supported"}
+
+    elif method == 'longstaff-schwartz':
+        num_trials = int(1e5)
+        num_timesteps = 100
+        if option_type == 'european':
+            result = {"error": "European options are not supported"}
+        elif option_type == 'american':
+            result = longstaff_schwartz(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6)))
+
+    calc_duration = time.time() - calc_start_time
+    print("Calculation Time: {:.4f}s".format(calc_duration))  # Logging the calculation time
+
+    return jsonify(result)
