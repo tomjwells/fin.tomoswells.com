@@ -10,7 +10,7 @@ import { Analytics } from '@vercel/analytics/react'
 
 import { Container, Flex, Theme } from '@radix-ui/themes'
 import { env } from '~/env'
-export const runtime = 'edge'
+// export const runtime = 'edge'
 
 const inter = Inter({
   subsets: ['latin'],

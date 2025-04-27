@@ -25,13 +25,12 @@ export default function SelectExpirationDate(pageParams: PageParams) {
             <Button
               variant={'outline'}
               className={cn('w-min justify-start h-8 text-left !border-[var(--gray-a7)] font-normal !bg-[--color-surface]', !pageParams.T && 'text-muted-foreground')}
-              // style={{ boxShadow: 'inset 0 0 0 var(--text-field-border-width) var(--gray-a7)' }}
             >
               <CalendarIcon className='mr-2 h-4 w-4' />
               {format(pageParams.T, 'PPP')}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className='w-auto p-0'>
+          <PopoverContent className="w-auto p-0">
             <Calendar
               mode='single'
               selected={new Date(pageParams.T)}
