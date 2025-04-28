@@ -184,12 +184,13 @@ def get_option_price():
     R_f: float = float(request.args.get('R_f'))
 
     # Timing the database query
-    db_start_time = time.time()
     con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+    db_start_time = time.time()
     results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
-    price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
     db_duration = time.time() - db_start_time
-    print("DB Query Time: {:.4f}s".format(db_duration))  # Logging the DB query time
+    print("DB Query Time: {:.4f}s, URL: {}".format(db_duration, os.getenv('TURSO_DATABASE_URL')))  # Logging the DB query time
+
+    price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
 
     # Calculate initial price and volatility (sigma)
     S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)

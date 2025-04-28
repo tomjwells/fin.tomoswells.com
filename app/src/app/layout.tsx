@@ -8,8 +8,9 @@ import { Inter } from 'next/font/google'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/react'
 
-import { Container, Flex, Theme } from '@radix-ui/themes'
+import { Callout, Container, Flex, Theme } from '@radix-ui/themes'
 import { env } from '~/env'
+import { InfoCircledIcon } from '@radix-ui/react-icons'
 
 export const runtime = 'edge'
 
@@ -36,6 +37,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className='py-4 sm:py-8' />
             <Nav />
             <main className='flex-1'>
+              <Container size='3' p='2'>
+                <Flex direction='column' align='center' gap='4'>
+                  <Callout.Root variant='surface' color='orange'>
+                    <Callout.Icon>
+                      <InfoCircledIcon />
+                    </Callout.Icon>
+                    <Callout.Text>The cloud database provider for this site is currently experiencing elevated latency. While this is being addressed, some features may exhibit temporary instability or reduced performance.</Callout.Text>
+                  </Callout.Root>
+                </Flex>
+              </Container>
               <Container size='3' p='2'>
                 <Flex direction='column' align='center' gap='4'>
                   {children}
