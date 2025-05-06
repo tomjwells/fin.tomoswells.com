@@ -12,10 +12,7 @@ from modules.markowitz.main import main
 import pandas as pd
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
-# from sqlalchemy import create_engine
-import libsql_experimental as libsql
-# import libsql_client as libsql
-
+from sqlalchemy import create_engine, text
 
 # import redis
 # import functools
@@ -47,6 +44,14 @@ app = Flask(__name__)
 # con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
 # con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
 
+engine = create_engine(
+    os.getenv('NEON_CONNECTION_STRING'),
+    pool_size=5,
+    max_overflow=0,
+    pool_pre_ping=True,  # drop dead connections automatically
+)
+
+
 # Markowitz
 
 
@@ -66,18 +71,23 @@ def markowitz_main():
   start_date = f'{startYear}-01-01'
   end_date = datetime.now().strftime('%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
-  columns = ['Date'] + assets
+  columns = ['date'] + assets
+  print("Fetching from db")
   db_start_time = time.time()
-  con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-  # Python's isidentifier is used to prevent SQL injection
-  query = f"SELECT {', '.join([f'`{col}`' for col in columns if col.isidentifier()])} FROM returns_history WHERE date BETWEEN ? AND ?"
-  rets = pd.DataFrame(
-      con.execute(query, (start_date, end_date)).fetchall(),
-      columns=columns
-  ).set_index('Date')
+  # Ensure all column names are safe
+  safe_columns = [col for col in columns if col.isidentifier()]
+  column_list = ", ".join(f'"{col}"' for col in safe_columns)  # double quotes for Postgres identifiers
+  # Use SQLAlchemy bind parameters (:start_date, :end_date)
+  query = text(f"""SELECT {column_list} FROM returns_history WHERE date BETWEEN :start_date AND :end_date""")
+
+  with engine.connect() as con:
+      rets = pd.DataFrame(
+          con.execute(query, {"start_date": start_date, "end_date": end_date}).fetchall(),
+          columns=safe_columns
+      ).set_index("date")
+
   db_duration = time.time() - db_start_time
-  print("DB Query Time: {:.4f}s".format(db_duration))  
-  # rets = pd.read_csv('rets.csv',  index_col='Date', parse_dates=["Date"], usecols=columns).loc[start_date:end_date]
+  print("DB Query Time: {:.4f}s".format(db_duration))
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
@@ -87,24 +97,73 @@ def markowitz_main():
 
   return jsonify(result)
 
-
 @app.route("/api/seed_db")
 def seed_db():
-  if app.debug == True:
-    import yfinance as yf
-    # con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-    risk_free_rate = yf.download("^IRX", progress=False,)['Adj Close'].tail(1)/100
-    risk_free_rate.to_sql(name='risk_free_rate', con=con, if_exists='replace')
-    price_history = download_symbols(pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
-    returns_history = price_history.pct_change(fill_method=None).iloc[1:]
-    print(price_history.columns)
-    price_history.to_sql(name='price_history', con=con, if_exists='replace', chunksize=500)
-    # May need to adjust chunksize, or con timeout
-    returns_history.to_sql(name='returns_history', con=con, if_exists='replace', chunksize=500)
+    """
+    Seeds the Turso DB from local price_history.csv and returns_history.csv.
+    Assumes both files are small enough to load fully into memory.
+    """
+    if not app.debug:
+        return jsonify({"error": "Cannot seed database in production"}), 400
+
+
+
+    print("Load and clean price_history")
+    try:
+        price_history = pd.read_csv("../price_history.csv", parse_dates=["Date"])
+        price_history.columns = [
+            c.replace(".", "_").replace("-", "_") if c != "Date" else c
+            for c in price_history.columns
+        ]
+        price_history.set_index("Date", inplace=True)
+        price_history.to_sql("price_history", con=engine, if_exists="replace", index_label="date")
+    except Exception as e:
+        return jsonify({"error": f"Failed loading price_history.csv: {str(e)}"}), 400
+
+    print("Load and clean returns_history")
+    try:
+        returns_history = pd.read_csv("../returns_history.csv", parse_dates=["Date"])
+        returns_history.columns = [
+            c.replace(".", "_").replace("-", "_") if c != "Date" else c
+            for c in returns_history.columns
+        ]
+        returns_history.set_index("Date", inplace=True)
+        returns_history.to_sql("returns_history", con=engine, if_exists="replace", index_label="date")
+    except Exception as e:
+        return jsonify({"error": f"Failed loading returns_history.csv: {str(e)}"}), 400
+    print("Load and clean risk_free_rate")
+    try:
+        risk_free_rate = pd.read_csv("../risk_free_rate.csv", parse_dates=["Date"])
+        risk_free_rate.columns = [
+            c.replace(".", "_").replace("-", "_") if c != "Date" else c
+            for c in risk_free_rate.columns
+        ]
+        risk_free_rate.set_index("Date", inplace=True)
+        risk_free_rate.to_sql("risk_free_rate", con=engine, if_exists="replace", index_label="date")
+    except Exception as e:
+        return jsonify({"error": f"Failed loading risk_free_rate.csv: {str(e)}"}), 400
 
     return jsonify({"message": "Database seeded successfully"})
-  else:
-    return jsonify({"error": "Cannot seed database in production"}), 400
+
+
+
+# @app.route("/api/seed_db")
+# def seed_db():
+#   if app.debug == True:
+#     import yfinance as yf
+#     # con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
+#     risk_free_rate = yf.download("^IRX", progress=False,)['Adj Close'].tail(1)/100
+#     risk_free_rate.to_sql(name='risk_free_rate', con=con, if_exists='replace')
+#     price_history = download_symbols(pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')[0]['Symbol'].to_list())
+#     returns_history = price_history.pct_change(fill_method=None).iloc[1:]
+#     print(price_history.columns)
+#     price_history.to_sql(name='price_history', con=con, if_exists='replace', chunksize=500)
+#     # May need to adjust chunksize, or con timeout
+#     returns_history.to_sql(name='returns_history', con=con, if_exists='replace', chunksize=500)
+
+#     return jsonify({"message": "Database seeded successfully"})
+#   else:
+#     return jsonify({"error": "Cannot seed database in production"}), 400
 
 
 def get_market_cap(symbol):
@@ -184,13 +243,15 @@ def get_option_price():
     R_f: float = float(request.args.get('R_f'))
 
     # Timing the database query
-    con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-    db_start_time = time.time()
-    results = con.execute(f'SELECT Date, "{ticker}" FROM price_history').fetchall()
-    db_duration = time.time() - db_start_time
-    print("DB Query Time: {:.4f}s, URL: {}".format(db_duration, os.getenv('TURSO_DATABASE_URL')))  # Logging the DB query time
+    query = text(f'SELECT date, "{ticker}" FROM price_history ORDER BY date')
 
-    price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+    db_start = time.time()
+    with engine.connect() as conn:
+        price_history = pd.read_sql(query, conn, parse_dates=["date"]).set_index("date")
+    db_duration = time.time() - db_start
+    print(f"DB Query Time: {db_duration:.4f}s, rows: {len(price_history)}")  # Logging the DB query time
+
+    # price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
 
     # Calculate initial price and volatility (sigma)
     S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
