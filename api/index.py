@@ -91,9 +91,15 @@ def markowitz_main():
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
-  rets = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1).to_numpy()
+  rets_df = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1) 
 
-  result = main(assets, rets, allowShortSelling, R_f=r)
+  result = main(
+      list(rets_df.columns),
+      rets_df.to_numpy(),
+      allowShortSelling,
+      R_f=r,
+  )
+
 
   return jsonify(result)
 
