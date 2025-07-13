@@ -1,16 +1,19 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { Box, Card, Flex, Heading, Text, Link, Spinner } from '@radix-ui/themes'
-import { FancyMultiSelect } from './_components/fancy-multi-select'
-import { env } from '~/env'
-import RiskFreeRateSlider from './_components/RiskFreeRateSlider'
-import z from 'zod'
-import ChartJSChart from './_components/ChartJSChart'
-import DateRangeSlider from './_components/DateRangeSlider'
 import NextLink from 'next/link'
-import AllowShortSelling from './_components/AllowShortSellingSwitch'
+import { Box, Card, Flex, Heading, Text, Link, Spinner } from '@radix-ui/themes'
+import z from 'zod'
+
+import { env } from '~/env'
+import FancyMultiSelect           from './_components/FancyMultiSelect'
+import RiskFreeRateSlider         from './_components/RiskFreeRateSlider'
+import DateRangeSlider            from './_components/DateRangeSlider'
+import AllowShortSelling          from './_components/AllowShortSellingSwitch'
+import ResultsSection             from './_components/ResultsSection'
+
 import { fetchAssets, fetchRiskFreeRate } from '~/sqlite'
-import TangencyPortfolioPieChart from './_components/TangencyPortfolioPieChart'
+
+export const runtime = 'edge' 
 
 const pageParamsSchema = z.object({
   assets: z.array(z.string()).optional().default([]),
@@ -21,7 +24,6 @@ const pageParamsSchema = z.object({
 })
 export type PageParams = z.infer<typeof pageParamsSchema>
 
-const formatPercent = (num: number) => `${(100 * num).toFixed(1)}%`
 
 export default async function MPTPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const resolvedSearchParams = await searchParams
@@ -38,6 +40,9 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
     params.append('allowShortSelling', `${false}`)
     redirect(`?${params.toString()}`)
   }
+
+  // Kick off heavy Promises
+  const mptPromise = fetchMPT(pageParams)
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-5'>
@@ -66,7 +71,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
           Hint: Start typing to find a particular ticker. Use backspace to remove tickers quickly. The list of selectable tickers comes from the stocks in the S&P 500.
         </Text>
         <Suspense>
-          <FancyMultiSelect assets={await fetchAssets} pageParams={pageParams} />
+          <FancyMultiSelect assetsPromise={fetchAssets} pageParams={pageParams} />
         </Suspense>
 
         <div className='flex flex-col my-4'>
@@ -80,9 +85,11 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
         <Flex direction='column' gap='2' className='my-4'>
           <div>
             <Heading size='3'>Risk free rate</Heading>
-            <Text size='2'>
-              The risk free rate is used to calculate the tangency portfolio. The current yield of the three-month U.S. Treasury bill is {(100 * (await fetchRiskFreeRate)).toFixed(2)}%.
-            </Text>
+            <Suspense>
+              <Text size='2'>
+                The risk free rate is used to calculate the tangency portfolio. The current yield of the 3-month U.S. Treasury bill is {(100 * (await fetchRiskFreeRate)).toFixed(2)}%.
+              </Text>
+            </Suspense>
           </div>
           <Suspense>
             <RiskFreeRateSlider {...pageParams} />
@@ -111,7 +118,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
             </Flex>
           }
         >
-          <ResultsSection pageParams={pageParams} searchParams={resolvedSearchParams} />
+          <ResultsSection mptPromise={mptPromise} pageParams={pageParams} />
         </Suspense>
       </Flex>
     </Card>
@@ -183,84 +190,6 @@ async function fetchMPT(pageParams: PageParams) {
       },
       sortino_variance: 0,
     }
-  }
-}
-
-async function ResultsSection({ pageParams, searchParams }: { pageParams: PageParams; searchParams?: Record<string, string | string[] | undefined> }) {
-  try {
-    const data = await fetchMPT(pageParams)
-
-    return (
-      <Flex direction='column' gap='6'>
-        {data.tickers.length < 2 && <Flex justify='center'>Enter two or more ticker symbols to see the efficient frontier.</Flex>}
-        <Card
-          className='!p-4'
-          style={{
-            background: 'linear-gradient(145deg, hsl(260deg 4.23% 8.0%), hsl(260deg 4.23% 3.5%))',
-          }}
-        >
-          <Box height='600px' width='9' p='4'>
-            <Suspense>
-              <ChartJSChart mptData={data} riskFreeRate={pageParams.r} tangencyPortfolio={data.tangency_portfolio} allowShortSelling={pageParams.allowShortSelling} />
-            </Suspense>
-          </Box>
-        </Card>
-        {data.tickers.length >= 2 && (
-          <>
-            <Flex direction='column' gap='4'>
-              {/* <div className='flex flex-col gap-4'> */}
-              <Heading size='5'>Tangency Portfolio Metrics</Heading>
-              <Flex gap='4'>
-                <div className='w-1/2'>
-                  <Heading size='4' color='gray'>
-                    Expected Return
-                  </Heading>
-                  <Heading size='6'>{formatPercent(data.tangency_portfolio.return_)}</Heading>
-                </div>
-                <div className='w-1/2'>
-                  <Heading size='4' color='gray'>
-                    Volatility
-                  </Heading>
-                  <Heading size='6'>{formatPercent(data.tangency_portfolio.risk)}</Heading>
-                </div>
-              </Flex>
-              <Flex gap='4'>
-                <div className='w-1/2'>
-                  <Heading size='4' color='gray'>
-                    Sharpe Ratio
-                  </Heading>
-                  <Heading size='6'>{((data.tangency_portfolio.return_ - pageParams.r) / (data.tangency_portfolio.risk - 0)).toFixed(2)}</Heading>
-                </div>
-                <div className='w-1/2'>
-                  <Heading size='4' color='gray'>
-                    Sortino Ratio
-                  </Heading>
-                  <Heading size='6'>{((data.tangency_portfolio.return_ - pageParams.r) / Math.sqrt(data.sortino_variance)).toFixed(2)}</Heading>
-                </div>
-              </Flex>
-            </Flex>
-            <Suspense>
-              <Heading size='4'>Tangency Portfolio Weights</Heading>
-              <TangencyPortfolioPieChart mptData={data} pageParams={pageParams} />
-            </Suspense>
-          </>
-        )}
-      </Flex>
-    )
-  } catch (error) {
-    console.error(JSON.stringify(error))
-    return (
-      <Flex direction='column' justify='center'>
-        <Text color='red'>
-          Something went wrong on the server. Large number of equities may cause the server to timeout before the request can be completed. Please either{' '}
-          <Link asChild>
-            <NextLink href={`?` + new URLSearchParams(searchParams as unknown as string).toString()}>try again</NextLink>
-          </Link>
-          , or reduce the number of equities.
-        </Text>
-        {env.NODE_ENV === 'development' && <Text>Error: {JSON.stringify(error)}</Text>}
-      </Flex>
-    )
   }
 }
 

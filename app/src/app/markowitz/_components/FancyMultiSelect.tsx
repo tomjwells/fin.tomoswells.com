@@ -21,7 +21,8 @@ export function getRandomElements(arr: string[], count: number): string[] {
   return Array.from(result)
 }
 
-export function FancyMultiSelect({ assets, pageParams: pageParams }: { assets: string[]; pageParams: PageParams }) {
+export default function FancyMultiSelect({ assetsPromise, pageParams: pageParams }: { assetsPromise: Promise<string[]>; pageParams: PageParams }) {
+  const assets = React.use(assetsPromise)
   const selectedAssets = pageParams.assets
   const router = useRouter()
   const searchParams = useSearchParams()
