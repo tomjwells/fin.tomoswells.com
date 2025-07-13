@@ -10,6 +10,7 @@ import z from 'zod'
 import { InfoCircledIcon } from '@radix-ui/react-icons'
 import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice } from '~/sqlite'
 
+export const runtime = 'edge' 
 
 type Method = {
   label: string
@@ -55,28 +56,24 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
   const ticker = pageParamsSchema.shape.ticker.safeParse(resolvedSearchParams.ticker).success ? (resolvedSearchParams?.ticker as PageParams['ticker']) : 'TSLA'
   
   // Validate query params
-  if (!pageParamsSchema.safeParse(resolvedSearchParams).success){
-
-    console.log({
-      searchParams: resolvedSearchParams,
-      ticker
-    })
-    redirect(
-      `?${new URLSearchParams({
+  console.log({
+    searchParams: resolvedSearchParams, ticker
+  })
+  if (!pageParamsSchema.safeParse(resolvedSearchParams).success) redirect(`?${new URLSearchParams({
         optionType: pageParamsSchema.shape.optionType.safeParse(resolvedSearchParams.optionType).success ? (resolvedSearchParams?.optionType as PageParams['optionType']) : 'european',
-        T: pageParamsSchema.shape.T.safeParse(resolvedSearchParams.T).success
-        ? (resolvedSearchParams?.T as PageParams['T'])
-        : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
+        T: pageParamsSchema.shape.T.safeParse(resolvedSearchParams.T).success ? (resolvedSearchParams?.T as PageParams['T']) : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
         ticker,
         K: pageParamsSchema.shape.K.safeParse(resolvedSearchParams.K).success ? (resolvedSearchParams?.K as PageParams['K']) : (await fetchUnderlyingPrice(ticker)).toFixed(0),
         R_f: pageParamsSchema.shape.R_f.safeParse(resolvedSearchParams.R_f).success ? (resolvedSearchParams?.R_f as PageParams['R_f']) : (await fetchRiskFreeRate).toString(),
-      })}`
-    )
-  }
+      })}`)
+  
 
   const pageParams = pageParamsSchema.parse(resolvedSearchParams)
 
   const methods = pageParams.optionType === 'european' ? ([METHODS[0], METHODS[1], METHODS[2]] as Method[]) : ([METHODS[2]] as Method[])
+
+
+
 
   return (
     <Card className='w-full before:![background-color:transparent] !p-6'>
@@ -102,13 +99,13 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
         </Heading>
         <Grid columns={{ initial: '1', sm: '3' }} gap='3' width='auto'>
           <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-            <SelectTicker pageParams={pageParams} assets={await fetchAssets} />
+            <SelectTicker pageParams={pageParams} assetsPromise={fetchAssets} />
           </Suspense>
           <Suspense>
             <SelectExpirationDate {...pageParams} />
           </Suspense>
           <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-            <SetStrike pageParams={pageParams} currentPrice={await fetchUnderlyingPrice(pageParams.ticker)} />
+            <SetStrike pageParams={pageParams} currentPricePromise={fetchUnderlyingPrice(ticker)} />
           </Suspense>
         </Grid>
 
@@ -152,9 +149,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
             </Flex>
             <div className='flex gap-4'>
               <div className='w-1/2'>
-                <Heading size='4' color='gray'>
-                  Call Option
-                </Heading>
+                <Heading size='4' color='gray'>Call Option</Heading>
                 <Heading size='6'>
                   <Suspense fallback={<Skeleton>Loading</Skeleton>}>
                     <OptionPrice {...pageParams} method={method} instrument='call' />
@@ -162,9 +157,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
                 </Heading>
               </div>
               <div className='w-1/2'>
-                <Heading size='4' color='gray'>
-                  Put Option
-                </Heading>
+                <Heading size='4' color='gray'>Put Option</Heading>
                 <Heading size='6'>
                   <Suspense fallback={<Skeleton>Loading</Skeleton>}>
                     <OptionPrice {...pageParams} method={method} instrument='put' />
@@ -181,7 +174,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
 
 async function OptionPrice(params: OptionPriceParams) {
   const price = await fetchOptionPrice(params)
-  return <>{price ? `$${price.toFixed(2)}` : <Skeleton />}</>
+  return `$${price.toFixed(2)}`
 }
 
 const fetchOptionPrice = (params: OptionPriceParams) =>

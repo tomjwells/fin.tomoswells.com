@@ -1,10 +1,12 @@
 'use client'
+import { use } from 'react'
 import { Flex, Select } from '@radix-ui/themes'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { PageParams } from '../page'
 import { tickers } from '~/data'
 
-export default function SelectTicker({ pageParams, assets }: { pageParams: PageParams; assets: string[] }) {
+export default function SelectTicker({ pageParams, assetsPromise }: { pageParams: PageParams; assetsPromise: Promise<string[]> }) {
+  const assets = use(assetsPromise)
   const router = useRouter()
   const searchParams = useSearchParams()
 

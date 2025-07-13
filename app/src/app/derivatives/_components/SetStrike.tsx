@@ -3,12 +3,13 @@
 import { Spinner } from '@radix-ui/themes'
 import { Box, Flex, Text, TextField } from '@radix-ui/themes'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useTransition, useState } from 'react'
+import { useTransition, useState, use } from 'react'
 import type { PageParams } from '../page'
 
 const DEBOUNCE_TIME = 250
 
-export default function SetStrike({ pageParams, currentPrice }: { pageParams: PageParams; currentPrice: number }) {
+export default function SetStrike({ pageParams, currentPricePromise }: { pageParams: PageParams; currentPricePromise: Promise<number> }) {
+  const currentPrice = use(currentPricePromise)
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
