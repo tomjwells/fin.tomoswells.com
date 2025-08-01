@@ -5,8 +5,8 @@ import { PageParams } from '../page'
 import { Bar } from 'react-chartjs-2'
 import { Chart, BarElement, BarController, CategoryScale, LinearScale } from 'chart.js'
 import { getRandomColor } from './ChartJSChart'
-import type { MPTData } from '../page'
 import { tickers } from '~/data'
+import { MPTData } from './ResultsSection'
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale)
 
