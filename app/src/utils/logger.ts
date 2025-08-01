@@ -9,7 +9,7 @@ async function send(payload: TgPayload) {
   try {
     const url = typeof env.APP_URL === 'string' && env.APP_URL.length > 0 ? `${env.APP_URL}/api/tg` : '/api/tg'
 
-    await fetch(url, {
+    void fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
