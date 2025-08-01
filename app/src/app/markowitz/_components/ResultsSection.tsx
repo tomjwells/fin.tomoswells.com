@@ -111,7 +111,7 @@ async function fetchMPT(pageParams: PageParams) {
 
     const fetchURL = `${env.APP_URL}/api/markowitz/main?${queryParams}`
     console.log({ fetching: fetchURL })
-    const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 }, signal: AbortSignal.timeout(60_000) })
+    const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 } })
     try {
       void fetch(`${env.APP_URL}/api/tg/${encodeURIComponent(fetchURL + ' ' + "Request succeeded")}`)
       return MPTSchema.parse(await response.json())
