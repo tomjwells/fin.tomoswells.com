@@ -9,11 +9,11 @@ async function send(payload: TgPayload) {
   try {
     const url = typeof env.APP_URL === 'string' && env.APP_URL.length > 0 ? `${env.APP_URL}/api/tg` : '/api/tg'
 
-    void fetch(url, {
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    //   signal: AbortSignal.timeout?.(1_000), // 1-second timeout so it can’t hang an Edge function
+      signal: AbortSignal.timeout?.(1_000), // 1-second timeout so it can’t hang an Edge function
     })
   } catch {
     /* silent – logging must never throw */
