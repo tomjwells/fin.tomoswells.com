@@ -115,12 +115,12 @@ async function fetchMPT(pageParams: PageParams): Promise<MPTData> {
     const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 } })
     try {
       const parsed = MPTSchema.parse(await response.json())
-      await logger.success(`${fetchURL} Request succeeded`)
+      void logger.success(`${fetchURL} Request succeeded`)
       console.log("Fetch succeeded", {parsed})
       return parsed
     } catch (error) {
       console.error(JSON.stringify(error))
-      await logger.error(`${fetchURL}`, error)
+      void logger.error(`${fetchURL}`, error)
       throw new Error('Failed to fetch MPT data')
     } 
   } else {
