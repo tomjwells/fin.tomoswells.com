@@ -138,7 +138,7 @@ export default function ChartJSChart({
     // Add weights
     if (tooltip.dataPoints[0]?.raw.weights) {
       // console.log({ tooltipItems: tooltip.dataPoints[0]?.raw.weights })
-      const weights = tooltip.dataPoints[0]?.raw.weights
+      const weights: Record<string, number> = tooltip.dataPoints[0]!.raw.weights	
 
       if (weights) {
         // Create the table head
@@ -183,7 +183,7 @@ export default function ChartJSChart({
           const tickerCell = document.createElement('td')
           tickerCell.appendChild(tickerDiv)
           const weightCell = document.createElement('td')
-          weightCell.textContent = `${(100 * parseFloat(v as string)).toFixed(2)}%`
+          weightCell.textContent = `${(100 * v).toFixed(2)}%`
           row.appendChild(tickerCell)
           row.appendChild(weightCell)
           tbody.appendChild(row)
@@ -206,7 +206,7 @@ export default function ChartJSChart({
     tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px'
   }
 
-  const minRiskDataPoint = data.reduce((min, current) => (current.risk < min.risk ? current : min), data[0]!)
+  const minRiskDataPoint = data.reduce((min, current) => (current.risk < min.risk ? current : min), data[0])
   const chartData = {
     labels: data.map((d) => d.risk),
     datasets: [
