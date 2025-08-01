@@ -101,7 +101,7 @@ const MPTSchema = z.object({
 export type MPTData = z.infer<typeof MPTSchema>
 
 
-async function fetchMPT(pageParams: PageParams) {
+async function fetchMPT(pageParams: PageParams): Promise<MPTData> {
   if (pageParams.assets.length >= 2) {
     const queryParams = new URLSearchParams()
     pageParams.assets.forEach((asset) => queryParams.append('assets', asset))
@@ -115,7 +115,7 @@ async function fetchMPT(pageParams: PageParams) {
     const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 } })
     try {
       const parsed = MPTSchema.parse(await response.json())
-      void logger.success(`${fetchURL} Request succeeded` + JSON.stringify(parsed, null, 2))
+      void logger.success(`${fetchURL} Request succeeded`)
       console.log("Fetch succeeded", {parsed})
       return parsed
     } catch (error) {
