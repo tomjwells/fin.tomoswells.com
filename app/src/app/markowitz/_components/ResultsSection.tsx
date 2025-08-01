@@ -4,6 +4,7 @@ import { Box, Card, Flex, Heading, Text, Link } from '@radix-ui/themes'
 import { PageParams } from '../page'
 import { env } from '~/env'
 import z from 'zod'
+import { logger } from '~/utils/logger'
 
 import TangencyPortfolioPieChart  from './TangencyPortfolioPieChart'
 import ChartJSChart               from './ChartJSChart'
@@ -113,11 +114,11 @@ async function fetchMPT(pageParams: PageParams) {
     console.log({ fetching: fetchURL })
     const response = await fetch(fetchURL, { next: { revalidate: env.NODE_ENV === 'production' ? 5 * 60 : 0 } })
     try {
-      void fetch(`${env.APP_URL}/api/tg/${encodeURIComponent(fetchURL + ' ' + "Request succeeded")}`)
+      void logger.success(`${fetchURL} Request succeeded`)
       return MPTSchema.parse(await response.json())
     } catch (error) {
       console.error(JSON.stringify(error))
-      void fetch(`${env.APP_URL}/api/tg/${encodeURIComponent(fetchURL + ' ' + JSON.stringify(error))}`)
+      void logger.error(`${fetchURL}`, error)
       throw new Error('Failed to fetch MPT data')
     } 
   } else {

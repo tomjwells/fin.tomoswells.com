@@ -28,6 +28,10 @@ class TGLogBot<T> {
     const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg, null, 4) : arg)).join(' ')
     await this.tg.sendMessage(env.TELEGRAM_CHAT_ID, `🛑 ERROR OCURRED (${where}): ${message}`)
   }
+  async success(where: string, ...args: T[]) {
+    const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg, null, 4) : arg)).join(' ')
+    await this.tg.sendMessage(env.TELEGRAM_CHAT_ID, `🟢 SUCCESS OCURRED (${where}): ${message}`)
+  }
 }
 
 const tg = new TGLogBot()
