@@ -1,22 +1,20 @@
 import { env } from '~/env'
 
-type TgPayload = {
-  type: 'ERROR' | 'SUCCESS'
-  message: string
-}
+type TgPayload = { type: 'ERROR' | 'SUCCESS'; message: string }
 
-async function send(payload: TgPayload) {
+const TG_URL = env.APP_URL && env.APP_URL.length > 0 ? `${env.APP_URL}/api/tg` : '/api/tg'
+
+async function send(payload: TgPayload): Promise<void> {
   try {
-    const url = typeof env.APP_URL === 'string' && env.APP_URL.length > 0 ? `${env.APP_URL}/api/tg` : '/api/tg'
-
-    await fetch(url, {
+    await fetch(TG_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout?.(1_000), // 1-second timeout so it can’t hang an Edge function
+      signal: AbortSignal.timeout?.(500), // 0.5 s hard cap
+      keepalive: true as unknown as boolean,
     })
   } catch {
-    /* silent – logging must never throw */
+    /* never throw – logging must not break the caller */
   }
 }
 
@@ -27,10 +25,13 @@ function serialise(arg: unknown): string {
 }
 
 export const logger = {
-  success(...args: unknown[]) {
-    void send({ type: 'SUCCESS', message: args.map(serialise).join(' ') })
+  /** Usage: `await logger.success('OK')` */
+  async success(...args: unknown[]): Promise<void> {
+    await send({ type: 'SUCCESS', message: args.map(serialise).join(' ') })
   },
-  error(...args: unknown[]) {
-    void send({ type: 'ERROR', message: args.map(serialise).join(' ') })
+
+  /** Usage: `await logger.error('Boom', err)` */
+  async error(...args: unknown[]): Promise<void> {
+    await send({ type: 'ERROR', message: args.map(serialise).join(' ') })
   },
 } as const
