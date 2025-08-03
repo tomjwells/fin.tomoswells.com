@@ -42,10 +42,12 @@ app = Flask(__name__)
 
 engine = create_engine(
     os.getenv("DB_CONNECTION_STRING"),
-    poolclass=NullPool,      # disable SQLAlchemy’s own pool
-    pool_pre_ping=True,      # still a good idea to drop dead TCPs
+    pool_size=5,            # hold 5 open connections per process
+    max_overflow=0,         # don’t let it go above 5
+    pool_recycle=600,       # recycle every 10min
+    pool_pre_ping=True,     # drop dead connections automatically
+    # **no** poolclass=NullPool
 )
-
 
 # Markowitz
 @app.route("/api/markowitz/main")
