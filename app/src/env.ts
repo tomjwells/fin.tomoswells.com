@@ -6,8 +6,6 @@ export const env = createEnv({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     APP_URL: z.string().url(),
     API_URL: z.string().url(),
-    TURSO_DATABASE_URL: z.string().url(),
-    TURSO_AUTH_TOKEN: z.string(),
     HOME_UID: z.string(),
     TELEGRAM_BOT_TOKEN: z.string(),
     TELEGRAM_CHAT_ID: z.string(),

@@ -40,12 +40,8 @@ from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
 
-# con = libsql.create_client_sync(f"{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}")
-# con = libsql.connect(database=os.getenv('TURSO_DATABASE_URL'), auth_token=os.getenv("TURSO_AUTH_TOKEN"))
-# con = create_engine(f"sqlite+{os.getenv('TURSO_DATABASE_URL')}/?authToken={os.getenv('TURSO_AUTH_TOKEN')}&secure=true", connect_args={'check_same_thread': False, "timeout": 10*60}, echo=True)
-
 engine = create_engine(
-    os.getenv('NEON_CONNECTION_STRING'),
+    os.getenv('POSTGRES_CONNECTION_STRING'),
     pool_size=5,
     max_overflow=0,
     pool_pre_ping=True,  # drop dead connections automatically
@@ -53,8 +49,6 @@ engine = create_engine(
 
 
 # Markowitz
-
-
 @app.route("/api/markowitz/main")
 def markowitz_main():
   assets: List[str] = request.args.getlist('assets')
@@ -303,3 +297,33 @@ def get_option_price():
     print("Calculation Time: {:.4f}s".format(calc_duration))  # Logging the calculation time
 
     return jsonify(result)
+
+# Utility Functions
+@app.get("/api/risk_free_rate")
+def risk_free_rate():
+    q = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
+    with engine.connect() as con:
+        (rate,) = con.execute(q).one()
+    return jsonify({"rate": float(rate)})
+
+@app.get("/api/assets")
+def assets():
+    q = text("""
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'price_history'
+      AND column_name <> 'date'
+      ORDER BY ordinal_position
+    """)
+    with engine.connect() as con:
+        rows = [r[0] for r in con.execute(q)]
+    return jsonify(rows)
+
+@app.get("/api/underlying_price/<ticker>")
+def underlying_price(ticker):
+    if not ticker.isidentifier():
+        return jsonify({"error": "Bad ticker"}), 400
+    q = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
+    with engine.connect() as con:
+        (price,) = con.execute(q).one()
+    return jsonify({"price": float(price)})

@@ -25,6 +25,7 @@ function serialise(arg: unknown): string {
 }
 
 export const logger = {
+  // Must be awaited otherwise fetch handle does not close in edge runtime
   /** Usage: `await logger.success('OK')` */
   async success(...args: unknown[]): Promise<void> {
     await send({ type: 'SUCCESS', message: args.map(serialise).join(' ') })

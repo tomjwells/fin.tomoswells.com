@@ -8,8 +8,9 @@ import SelectTicker from './_components/SelectTicker'
 import React, { Suspense } from 'react'
 import z from 'zod'
 import { InfoCircledIcon } from '@radix-ui/react-icons'
-import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice } from '~/sqlite'
+import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice, } from '~/utils/fetchers'
 
+export const dynamic = 'force-dynamic'
 export const runtime = 'edge' 
 
 type Method = {

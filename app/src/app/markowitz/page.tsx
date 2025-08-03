@@ -10,8 +10,9 @@ import DateRangeSlider            from './_components/DateRangeSlider'
 import AllowShortSelling          from './_components/AllowShortSellingSwitch'
 import ResultsSection             from './_components/ResultsSection'
 
-import { fetchAssets, fetchRiskFreeRate } from '~/sqlite'
+import { fetchAssets, fetchRiskFreeRate } from '~/utils/fetchers'
 
+export const dynamic = 'force-dynamic'
 export const runtime = 'edge' 
 
 const pageParamsSchema = z.object({
