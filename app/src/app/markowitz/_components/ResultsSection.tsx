@@ -121,7 +121,7 @@ async function fetchMPT(pageParams: PageParams): Promise<MPTData> {
       return parsed
     } catch (error) {
       console.error(JSON.stringify(error))
-      after(async () => {logger.error(`${fetchURL}`, error)})
+      after(async () => {await logger.error(`${fetchURL}`, error)})
       throw new Error('Failed to fetch MPT data')
     } 
   } else {
