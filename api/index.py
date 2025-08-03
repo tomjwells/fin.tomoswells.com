@@ -41,7 +41,7 @@ app = Flask(__name__)
 
 engine = create_engine(
     os.getenv('DB_CONNECTION_STRING'),
-    pool_size=5,
+    pool_size=5, pool_recycle=600,
     max_overflow=0,
     pool_pre_ping=True,  # drop dead connections automatically
 )
@@ -66,22 +66,22 @@ def markowitz_main():
   end_date = datetime.now().strftime('%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
 
   columns = ['date'] + assets
-  print("Fetching from db")
-  db_start_time = time.time()
   # Ensure all column names are safe
   safe_columns = [col for col in columns if col.isidentifier()]
   column_list = ", ".join(f'"{col}"' for col in safe_columns)  # double quotes for Postgres identifiers
   # Use SQLAlchemy bind parameters (:start_date, :end_date)
   query = text(f"""SELECT {column_list} FROM returns_history WHERE date BETWEEN :start_date AND :end_date""")
 
+  print("Fetching from db")
+  db_start_time = time.time()
   with engine.connect() as con:
       rets = pd.DataFrame(
           con.execute(query, {"start_date": start_date, "end_date": end_date}).fetchall(),
           columns=safe_columns
       ).set_index("date")
-
   db_duration = time.time() - db_start_time
   print("DB Query Time: {:.4f}s".format(db_duration))
+
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
@@ -177,7 +177,6 @@ def download_symbols(symbols: List[str]) -> pd.DataFrame:
     market_caps = list(executor.map(get_market_cap, symbols))
 
   # Sort symbols by market cap, descending order
-
   print(market_caps)
   sorted_ticker_market_caps = sorted(market_caps, key=lambda x: x[1], reverse=True)
   sorted_symbols = [ticker for ticker, _ in sorted_ticker_market_caps]
@@ -218,7 +217,7 @@ def download_data(ticker: str) -> pd.Series:
   return yf.download(ticker.replace('.', '-'), progress=False)
 
 
-# Derivatives
+# ---------  Derivatives   ---------
 
 
 # Route for option-price
@@ -298,7 +297,8 @@ def get_option_price():
 
     return jsonify(result)
 
-# Utility Functions
+# ---------  Utility Functions   ---------
+
 @app.get("/api/risk_free_rate")
 def risk_free_rate():
     q = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')

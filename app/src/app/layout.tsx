@@ -8,11 +8,8 @@ import { Inter } from 'next/font/google'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/react'
 
-import { Callout, Container, Flex, Theme } from '@radix-ui/themes'
+import { Container, Flex, Theme } from '@radix-ui/themes'
 import { env } from '~/env'
-import { InfoCircledIcon } from '@radix-ui/react-icons'
-
-export const runtime = 'edge'
 
 const inter = Inter({
   subsets: ['latin'],
