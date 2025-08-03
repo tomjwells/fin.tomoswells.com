@@ -16,14 +16,14 @@ async function getJSON<T>(url: string): Promise<T> {
 /* 1. Risk-free rate (single value)                                   */
 /* ------------------------------------------------------------------ */
 export const fetchRiskFreeRate: Promise<number> = getJSON<{ rate: number }>(
-  `${env.API_URL}/risk_free_rate`,
+  `${env.APP_URL}/api/risk_free_rate`,
 ).then((d) => d.rate ?? 0.05)
 
 /* ------------------------------------------------------------------ */
 /* 2. List of asset columns                                           */
 /* ------------------------------------------------------------------ */
 export const fetchAssets: Promise<string[]> = getJSON<string[]>(
-  `${env.API_URL}/assets`,
+  `${env.APP_URL}/api/assets`,
 )
 
 /* ------------------------------------------------------------------ */
@@ -32,7 +32,7 @@ export const fetchAssets: Promise<string[]> = getJSON<string[]>(
 export async function fetchUnderlyingPrice(ticker: string): Promise<number> {
   if (!/^[A-Za-z0-9_]+$/.test(ticker)) throw new Error('Invalid ticker')
   const data = await getJSON<{ price: number }>(
-    `${env.API_URL}/underlying_price/${ticker}`,
+    `${env.APP_URL}/api/underlying_price/${ticker}`,
   )
   return data.price
 }
