@@ -65,7 +65,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
         T: pageParamsSchema.shape.T.safeParse(resolvedSearchParams.T).success ? (resolvedSearchParams?.T as PageParams['T']) : `${new Date().getFullYear() + 1}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-01`,
         ticker,
         K: pageParamsSchema.shape.K.safeParse(resolvedSearchParams.K).success ? (resolvedSearchParams?.K as PageParams['K']) : (await fetchUnderlyingPrice(ticker)).toFixed(0),
-        R_f: pageParamsSchema.shape.R_f.safeParse(resolvedSearchParams.R_f).success ? (resolvedSearchParams?.R_f as PageParams['R_f']) : (await fetchRiskFreeRate).toString(),
+        R_f: pageParamsSchema.shape.R_f.safeParse(resolvedSearchParams.R_f).success ? (resolvedSearchParams?.R_f as PageParams['R_f']) : (await fetchRiskFreeRate()).toString(),
       })}`)
   
 
@@ -100,7 +100,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
         </Heading>
         <Grid columns={{ initial: '1', sm: '3' }} gap='3' width='auto'>
           <Suspense fallback={<Skeleton>Loading</Skeleton>}>
-            <SelectTicker pageParams={pageParams} assetsPromise={fetchAssets} />
+            <SelectTicker pageParams={pageParams} assetsPromise={fetchAssets()} />
           </Suspense>
           <Suspense>
             <SelectExpirationDate {...pageParams} />

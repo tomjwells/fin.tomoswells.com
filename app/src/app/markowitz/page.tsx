@@ -32,7 +32,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
   if (!success) {
     console.log({searchParams: resolvedSearchParams, pageParams, success}) // Log to server
     const params = new URLSearchParams()
-    const [assets, riskFreeRate] = await Promise.all([fetchAssets, fetchRiskFreeRate])
+    const [assets, riskFreeRate] = await Promise.all([fetchAssets(), fetchRiskFreeRate()])
     getRandomElements(assets, 40).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
@@ -68,7 +68,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
           Hint: Start typing to find a particular ticker. Use backspace to remove tickers quickly. The list of selectable tickers comes from the stocks in the S&P 500.
         </Text>
         <Suspense>
-          <FancyMultiSelect assetsPromise={fetchAssets} pageParams={pageParams} />
+          <FancyMultiSelect assetsPromise={fetchAssets()} pageParams={pageParams} />
         </Suspense>
 
         <div className='flex flex-col my-4'>
@@ -84,7 +84,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
             <Heading size='3'>Risk free rate</Heading>
             <Suspense>
               <Text size='2'>
-                The risk free rate is used to calculate the tangency portfolio. The current yield of the 3-month U.S. Treasury bill is {(100 * (await fetchRiskFreeRate)).toFixed(2)}%.
+                The risk free rate is used to calculate the tangency portfolio. The current yield of the 3-month U.S. Treasury bill is {(100 * (await fetchRiskFreeRate())).toFixed(2)}%.
               </Text>
             </Suspense>
           </div>
