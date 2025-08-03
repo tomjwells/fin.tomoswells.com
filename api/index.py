@@ -13,6 +13,7 @@ import pandas as pd
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 
 # import redis
 # import functools
@@ -40,12 +41,10 @@ from sqlalchemy import create_engine, text
 app = Flask(__name__)
 
 engine = create_engine(
-    os.getenv('DB_CONNECTION_STRING'),
-    pool_size=5, pool_recycle=600,
-    max_overflow=0,
-    pool_pre_ping=True,  # drop dead connections automatically
+    os.getenv("DB_CONNECTION_STRING"),
+    poolclass=NullPool,      # disable SQLAlchemy’s own pool
+    pool_pre_ping=True,      # still a good idea to drop dead TCPs
 )
-
 
 
 # Markowitz
