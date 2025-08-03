@@ -37,10 +37,7 @@ from sqlalchemy import create_engine, text
 #       return val
 #   return wrapper
 
-import json
-print("DEBUG env keys →", json.dumps(list(os.environ.keys())[:20]))
 app = Flask(__name__)
-
 
 engine = create_engine(
     os.getenv('DB_CONNECTION_STRING'),

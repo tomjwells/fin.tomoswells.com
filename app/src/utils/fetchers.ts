@@ -1,4 +1,3 @@
-// utils/fetchers.ts
 import { env } from '~/env'
 
 const CACHE_DURATION = 5 * 60
