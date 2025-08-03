@@ -40,12 +40,9 @@ from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
 
-import json, os, sys
-if os.getenv("POSTGRES_CONNECTION_STRING") is None:
-    print("DEBUG env keys →", json.dumps(list(os.environ.keys())[:20]), file=sys.stderr)
-    raise RuntimeError("POSTGRES_CONNECTION_STRING is missing")
+
 engine = create_engine(
-    os.getenv('POSTGRES_CONNECTION_STRING'),
+    os.getenv('DB_CONNECTION_STRING'),
     pool_size=5,
     max_overflow=0,
     pool_pre_ping=True,  # drop dead connections automatically
