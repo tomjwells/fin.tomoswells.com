@@ -241,7 +241,7 @@ def get_option_price():
     R_f: float = float(request.args.get('R_f'))
 
     # Timing the database query
-    query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date')
+    query = text(f'SELECT "{ticker}" FROM price_history WHERE "{ticker}" IS NOT NULL ORDER BY date')
 
     db_start = time.time()
     with engine.connect() as conn:
