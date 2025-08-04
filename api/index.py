@@ -13,7 +13,6 @@ import pandas as pd
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import create_engine, text
-from sqlalchemy.pool import NullPool
 
 # import redis
 # import functools
@@ -46,7 +45,6 @@ engine = create_engine(
     max_overflow=0,         # don’t let it go above 5
     pool_recycle=600,       # recycle every 10min
     pool_pre_ping=True,     # drop dead connections automatically
-    # **no** poolclass=NullPool
 )
 
 # Markowitz
@@ -243,20 +241,24 @@ def get_option_price():
     R_f: float = float(request.args.get('R_f'))
 
     # Timing the database query
-    query = text(f'SELECT date, "{ticker}" FROM price_history ORDER BY date')
+    query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date')
 
     db_start = time.time()
     with engine.connect() as conn:
-        price_history = pd.read_sql(query, conn, parse_dates=["date"]).set_index("date")
+        rows = conn.execute(SQL).fetchall() 
     db_duration = time.time() - db_start
     print(f"DB Query Time: {db_duration:.4f}s, rows: {len(price_history)}")  # Logging the DB query time
 
     # price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+    prices = np.array([r[0] for r in rows], dtype=float)
 
     # Calculate initial price and volatility (sigma)
-    S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
-    returns = price_history.pct_change()
-    sigma = np.sqrt(365) * returns.std().iloc[0]
+    # S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
+    # returns = price_history.pct_change()
+    # sigma = np.sqrt(365) * returns.std().iloc[0]
+    S_0 = round(prices[-1], 2)
+    returns = prices[1:] / prices[:-1] - 1
+    sigma = np.sqrt(365) * returns.std()
 
     print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
           "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
