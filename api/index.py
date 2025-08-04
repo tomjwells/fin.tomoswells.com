@@ -245,7 +245,7 @@ def get_option_price():
 
     db_start = time.time()
     with engine.connect() as conn:
-        rows = conn.execute(SQL).fetchall() 
+        rows = conn.execute(query).fetchall() 
     db_duration = time.time() - db_start
     print(f"DB Query Time: {db_duration:.4f}s, rows: {len(price_history)}")  # Logging the DB query time
 
