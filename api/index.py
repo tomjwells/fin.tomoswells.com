@@ -43,29 +43,36 @@ load_dotenv()
 #       return val
 #   return wrapper
 
+
+DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg2", "postgresql+asyncpg")
+
+# Create the engine at the module level
+engine = create_async_engine(DB_URL, pool_size=5, max_overflow=2)
+
+# Create the session factory at the module level
+AsyncSessionLocal = sessionmaker(
+    bind=engine, class_=AsyncSession, expire_on_commit=False
+)
+
 # --- Application Lifecycle ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Manage the SQLAlchemy engine and session factory for the application lifecycle.
+    Manage the application lifecycle.
     """
-    print("Application startup: Creating database engine.")
-    engine = create_async_engine(os.getenv("DB_CONNECTION_STRING").replace("postgresql+psycopg2", "postgresql+asyncpg"), pool_size=5, max_overflow=2)
-    
-    app.state.async_session_factory = sessionmaker(
-        bind=engine, class_=AsyncSession, expire_on_commit=False
-    )
-    yield  # The application is now running
-    
+    print("Application startup.")
+    yield
     print("Application shutdown: Disposing database engine.")
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
 
 # --- Dependency Injection ---
-async def get_session(request: Request) -> AsyncSession:
-    async_session_factory = request.app.state.async_session_factory
-    async with async_session_factory() as session:
+async def get_session() -> AsyncSession:
+    """
+    Provides a SQLAlchemy async session for a single request.
+    """
+    async with AsyncSessionLocal() as session:
         yield session
 
 # Markowitz
