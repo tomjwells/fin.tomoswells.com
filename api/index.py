@@ -81,7 +81,7 @@ async def markowitz_main(
   # Ensure all column names are safe
   safe_columns = [col for col in assets if col.isidentifier()]
   column_list = ", ".join(f'"{col}"' for col in safe_columns)  # double quotes for Postgres identifiers
-  
+
   # Use SQLAlchemy bind parameters (:start_date, :end_date)
   query = text(f"""
     SELECT date, {column_list} FROM returns_history
@@ -96,8 +96,7 @@ async def markowitz_main(
 
   print("Fetching from db")
   db_start = time.time()
-  result = await session.execute(query, {"start_year": start_year, "end_year": end_year})
-  rows = result.fetchall()
+  rows = (await session.execute(query, {"start_year": start_year, "end_year": end_year})).all()
   db_duration = time.time() - db_start
   print(f"DB Query Time: {db_duration:.4f}s, rows: {len(rows)}")
   rets = pd.DataFrame(rows, columns=['date']+safe_columns)
@@ -248,7 +247,7 @@ async def get_option_price(
     instrument: Literal['call', 'put'] = Query(...),
     T: datetime = Query(..., description="Exercise date in YYYY-MM-DD"),
     K: float = Query(...),
-    ticker: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+    ticker: str = Query(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$", description="Ticker symbol"),
     R_f: float = Query(...),
     session: AsyncSession = Depends(get_session),
 ):
