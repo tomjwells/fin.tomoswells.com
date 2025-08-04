@@ -3,6 +3,7 @@ import time
 import random
 import numpy as np
 import pandas as pd
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
 from datetime import date, datetime
@@ -42,29 +43,29 @@ load_dotenv()
 #       return val
 #   return wrapper
 
-# Create the async engine
-async_engine = create_async_engine(os.getenv("DB_CONNECTION_STRING").replace("postgresql+psycopg2", "postgresql+asyncpg"), echo=False, pool_size=10, max_overflow=5)
-
-# Create a factory for async sessions
-AsyncSessionLocal = sessionmaker(
-    bind=async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
-
 # --- Application Lifecycle ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("SQLAlchemy async engine is ready.")
-    yield
-    print("Disposing SQLAlchemy async engine.")
-    await async_engine.dispose()
+    """
+    Manage the SQLAlchemy engine and session factory for the application lifecycle.
+    """
+    print("Application startup: Creating database engine.")
+    engine = create_async_engine(os.getenv("DB_CONNECTION_STRING").replace("postgresql+psycopg2", "postgresql+asyncpg"), pool_size=5, max_overflow=2)
+    
+    app.state.async_session_factory = sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+    yield  # The application is now running
+    
+    print("Application shutdown: Disposing database engine.")
+    await engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
 
 # --- Dependency Injection ---
-async def get_session() -> AsyncSession:
-    async with AsyncSessionLocal() as session:
+async def get_session(request: Request) -> AsyncSession:
+    async_session_factory = request.app.state.async_session_factory
+    async with async_session_factory() as session:
         yield session
 
 # Markowitz
