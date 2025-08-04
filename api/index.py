@@ -2,18 +2,23 @@ import os
 import time
 import random
 import numpy as np
-from flask import Flask, request, jsonify
-from datetime import datetime
+import pandas as pd
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
+from datetime import date, datetime
 from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.longstaff_schwartz import longstaff_schwartz
 from modules.derivatives.binomial_model import EUPrice, USPrice
 from modules.markowitz.main import main
-import pandas as pd
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
+load_dotenv() 
 # import redis
 # import functools
 # import pickle
@@ -37,50 +42,66 @@ from sqlalchemy import create_engine, text
 #       return val
 #   return wrapper
 
-app = Flask(__name__)
+# Create the async engine
+async_engine = create_async_engine(os.getenv("DB_CONNECTION_STRING").replace("postgresql+psycopg2", "postgresql+asyncpg"), echo=False, pool_size=10, max_overflow=5)
 
-engine = create_engine(
-    os.getenv("DB_CONNECTION_STRING"),
-    pool_size=5,            # hold 5 open connections per process
-    max_overflow=0,         # don’t let it go above 5
-    pool_recycle=600,       # recycle every 10min
-    pool_pre_ping=True,     # drop dead connections automatically
+# Create a factory for async sessions
+AsyncSessionLocal = sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 
+# --- Application Lifecycle ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("SQLAlchemy async engine is ready.")
+    yield
+    print("Disposing SQLAlchemy async engine.")
+    await async_engine.dispose()
+
+app = FastAPI(lifespan=lifespan)
+
+# --- Dependency Injection ---
+async def get_session() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
+
 # Markowitz
-@app.route("/api/markowitz/main")
-def markowitz_main():
-  assets: List[str] = request.args.getlist('assets')
-  startYear: int = int(request.args.get('startYear'))
-  endYear: int = int(request.args.get('endYear'))
-  r: float = float(request.args.get('r'))
-  allowShortSelling: bool = request.args.get('allowShortSelling') == 'true'
+@app.get("/api/markowitz/main")
+async def markowitz_main(
+    assets: List[str] = Query(...),
+    start_year: int = Query(..., alias="startYear"),
+    end_year: int = Query(..., alias="endYear"),
+    r: float = Query(...),
+    allowShortSelling: bool = Query(...),
+    session: AsyncSession = Depends(get_session)
+):
 
-  assert isinstance(assets, list), "assets should be a list"
-  assert isinstance(startYear, int), "startYear should be a int"
-  assert isinstance(endYear, int), "endYear should be a int"
-  assert isinstance(allowShortSelling, bool), "allowShortSelling should be a bool"
-
-  start_date = f'{startYear}-01-01'
-  end_date = datetime.now().strftime('%Y-%m-%d') if endYear == datetime.now().year else f'{endYear}-01-01'
-
-  columns = ['date'] + assets
   # Ensure all column names are safe
-  safe_columns = [col for col in columns if col.isidentifier()]
+  safe_columns = [col for col in assets if col.isidentifier()]
   column_list = ", ".join(f'"{col}"' for col in safe_columns)  # double quotes for Postgres identifiers
+  
   # Use SQLAlchemy bind parameters (:start_date, :end_date)
-  query = text(f"""SELECT {column_list} FROM returns_history WHERE date BETWEEN :start_date AND :end_date""")
+  query = text(f"""
+    SELECT date, {column_list} FROM returns_history
+    WHERE date BETWEEN make_date(CAST(:start_year AS integer), 1, 1) AND
+      (CASE
+          WHEN CAST(:end_year AS integer) >= EXTRACT(YEAR FROM CURRENT_DATE)
+          THEN CURRENT_DATE
+          ELSE make_date(CAST(:end_year AS integer), 12, 31)
+        END)
+    ORDER BY date
+  """)
 
   print("Fetching from db")
-  db_start_time = time.time()
-  with engine.connect() as con:
-      rets = pd.DataFrame(
-          con.execute(query, {"start_date": start_date, "end_date": end_date}).fetchall(),
-          columns=safe_columns
-      ).set_index("date")
-  db_duration = time.time() - db_start_time
-  print("DB Query Time: {:.4f}s".format(db_duration))
-
+  db_start = time.time()
+  result = await session.execute(query, {"start_year": start_year, "end_year": end_year})
+  rows = result.fetchall()
+  db_duration = time.time() - db_start
+  print(f"DB Query Time: {db_duration:.4f}s, rows: {len(rows)}")
+  rets = pd.DataFrame(rows, columns=['date']+safe_columns)
+  rets.set_index('date', inplace=True)
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
@@ -94,16 +115,16 @@ def markowitz_main():
   )
 
 
-  return jsonify(result)
+  return result
 
-@app.route("/api/seed_db")
+@app.get("/api/seed_db")
 def seed_db():
     """
     Seeds the Turso DB from local price_history.csv and returns_history.csv.
     Assumes both files are small enough to load fully into memory.
     """
     if not app.debug:
-        return jsonify({"error": "Cannot seed database in production"}), 400
+        raise HTTPException(status_code=400, detail="Cannot seed database in production")
 
 
 
@@ -117,7 +138,7 @@ def seed_db():
         price_history.set_index("Date", inplace=True)
         price_history.to_sql("price_history", con=engine, if_exists="replace", index_label="date")
     except Exception as e:
-        return jsonify({"error": f"Failed loading price_history.csv: {str(e)}"}), 400
+        raise HTTPException(status_code=400, detail=f"Failed loading price_history.csv: {e}")
 
     print("Load and clean returns_history")
     try:
@@ -129,7 +150,7 @@ def seed_db():
         returns_history.set_index("Date", inplace=True)
         returns_history.to_sql("returns_history", con=engine, if_exists="replace", index_label="date")
     except Exception as e:
-        return jsonify({"error": f"Failed loading returns_history.csv: {str(e)}"}), 400
+        return HTTPException(detail=f"Failed loading returns_history.csv: {str(e)}", status_code=400)
     print("Load and clean risk_free_rate")
     try:
         risk_free_rate = pd.read_csv("../risk_free_rate.csv", parse_dates=["Date"])
@@ -140,13 +161,13 @@ def seed_db():
         risk_free_rate.set_index("Date", inplace=True)
         risk_free_rate.to_sql("risk_free_rate", con=engine, if_exists="replace", index_label="date")
     except Exception as e:
-        return jsonify({"error": f"Failed loading risk_free_rate.csv: {str(e)}"}), 400
+        return HTTPException(detail=f"Failed loading risk_free_rate.csv: {str(e)}", status_code=400)
 
-    return jsonify({"message": "Database seeded successfully"})
+    return {"message": "Database seeded successfully"}
 
 
 
-# @app.route("/api/seed_db")
+# @app.get("/api/seed_db")
 # def seed_db():
 #   if app.debug == True:
 #     import yfinance as yf
@@ -220,42 +241,32 @@ def download_data(ticker: str) -> pd.Series:
 
 
 # Route for option-price
-@app.route("/api/derivatives/option-price")
-def get_option_price():
-    option_type = request.args.get('optionType')
-    assert option_type in ['european', 'american'], "option_type should be either 'european' or 'american'"
-    method = request.args.get('method')
-    assert method in ['binomial', 'black-scholes', 'monte-carlo', "longstaff-schwartz"], "method should be either 'binomial', 'black-scholes', 'monte-carlo'"
-    instrument: Literal['call', 'put'] = request.args.get('instrument')
-    assert instrument in ['call', 'put'], "instrument should be either 'call' or 'put'"
-
+@app.get("/api/derivatives/option-price")
+async def get_option_price(
+    option_type: Literal['european', 'american'] = Query(..., alias="optionType"),
+    method: Literal['binomial', 'black-scholes', 'monte-carlo', 'longstaff-schwartz'] = Query(...),
+    instrument: Literal['call', 'put'] = Query(...),
+    T: datetime = Query(..., description="Exercise date in YYYY-MM-DD"),
+    K: float = Query(...),
+    ticker: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+    R_f: float = Query(...),
+    session: AsyncSession = Depends(get_session),
+):
     t: datetime = datetime.now()
-    T: datetime = datetime.strptime(request.args.get('T'), '%Y-%m-%d')
     if t > T:
-        return jsonify({"error": f"t: {t} should be less than T: {T}"}), 400
+        return HTTPException(status_code=400, detail=f"t: {t} should be less than T: {T}")
     tau = (T - t).days / 365
-    K: float = float(request.args.get('K'))
-    assert isinstance(K, (float)), "K should be a float"
-    ticker = request.args.get('ticker') if request.args.get('ticker').isidentifier() else None
-    assert isinstance(ticker, str), "ticker should be a string"
-    R_f: float = float(request.args.get('R_f'))
 
-    # Timing the database query
     query = text(f'SELECT "{ticker}" FROM price_history WHERE "{ticker}" IS NOT NULL ORDER BY date')
 
+    # Timing the database query
     db_start = time.time()
-    with engine.connect() as conn:
-        rows = conn.execute(query).fetchall() 
-    db_duration = time.time() - db_start
+    result = await session.execute(query)
+    rows = result.fetchall()
     prices = np.array([r[0] for r in rows], dtype=float)
-    print(f"DB Query Time: {db_duration:.4f}s, rows: {len(prices)}")  # Logging the DB query time
-
-    # price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
+    print(f"DB Query Time: {time.time() - db_start:.4f}s, rows: {len(prices)}")
 
     # Calculate initial price and volatility (sigma)
-    # S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
-    # returns = price_history.pct_change()
-    # sigma = np.sqrt(365) * returns.std().iloc[0]
     S_0 = round(prices[-1], 2)
     returns = prices[1:] / prices[:-1] - 1
     sigma = np.sqrt(365) * returns.std()
@@ -263,70 +274,91 @@ def get_option_price():
     print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
           "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
 
+    binomial_num_steps = int(1e3)
+    binomial_num_trials = int(1e5)
+    monte_carlo_num_timesteps = 100
+    longstaff_schwartz_num_trials = int(1e5)
+    longstaff_schwartz_num_timesteps = 100
+
     # Timing the option price calculation
     calc_start_time = time.time()
-    if method == 'binomial':
-        num_steps = int(1e3)
-        if option_type == 'european':
-            result = EUPrice(instrument, S_0, sigma, R_f, K, tau, num_steps)
-        elif option_type == 'american':
-            result = USPrice(instrument, S_0, sigma, R_f, K, tau, num_steps)
+    match (method, option_type):
+        case "binomial", "european":
+            result = EUPrice(instrument, S_0, sigma, R_f, K, tau, binomial_num_steps)
 
-    elif method == 'black-scholes':
-        if option_type == 'european':
+        case "binomial", "american":
+            result = USPrice(instrument, S_0, sigma, R_f, K, tau, binomial_num_steps)
+
+        case "black-scholes", "european":
             bs = black_scholes_option(S_0, K, tau, R_f, sigma)
             result = bs.value(instrument)
-        elif option_type == 'american':
+
+        case "black-scholes", "american":
             result = {"error": "American options are not supported"}
 
-    elif method == 'monte-carlo':
-        num_trials = int(1e5)
-        num_timesteps = 100
-        if option_type == 'european':
-            result = monte_carlo(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6)))
-        elif option_type == 'american':
+        case "monte-carlo", "european":
+            result = monte_carlo(
+                instrument,
+                S_0, K, tau, R_f, sigma,
+                num_trials=binomial_num_trials,
+                num_timesteps=monte_carlo_num_timesteps,
+                seed=random.randint(0, int(1e6)),
+            )
+
+        case "monte-carlo", "american":
             result = {"error": "American options are not supported"}
 
-    elif method == 'longstaff-schwartz':
-        num_trials = int(1e5)
-        num_timesteps = 100
-        if option_type == 'european':
+        case "longstaff-schwartz", "american":
+            result = longstaff_schwartz(
+                instrument,
+                S_0, K, tau, R_f, sigma,
+                num_trials=longstaff_schwartz_num_trials,
+                num_timesteps=longstaff_schwartz_num_timesteps,
+                seed=random.randint(0, int(1e6)),
+            )
+
+        case "longstaff-schwartz", "european":
             result = {"error": "European options are not supported"}
-        elif option_type == 'american':
-            result = longstaff_schwartz(instrument, S_0, K, tau, R_f, sigma, num_trials=num_trials, num_timesteps=num_timesteps, seed=random.randint(0, int(1e6)))
+
+        case _:
+            raise ValueError(f"Unsupported method/option_type combination: {method!r}/{option_type!r}")
 
     calc_duration = time.time() - calc_start_time
     print("Calculation Time: {:.4f}s".format(calc_duration))  # Logging the calculation time
 
-    return jsonify(result)
+    return result
 
 # ---------  Utility Functions   ---------
-
 @app.get("/api/risk_free_rate")
-def risk_free_rate():
-    q = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
-    with engine.connect() as con:
-        (rate,) = con.execute(q).one()
-    return jsonify({"rate": float(rate)})
+async def risk_free_rate(session: AsyncSession = Depends(get_session)):
+    query = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
+    rate = await session.scalar(query)
+    if rate is None:
+        raise HTTPException(status_code=404, detail="Risk-free rate not found.")
+    return {"rate": float(rate)}
+
 
 @app.get("/api/assets")
-def assets():
-    q = text("""
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'price_history'
-      AND column_name <> 'date'
-      ORDER BY ordinal_position
-    """)
-    with engine.connect() as con:
-        rows = [r[0] for r in con.execute(q)]
-    return jsonify(rows)
+async def assets(session: AsyncSession = Depends(get_session)):
+    query = text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name='price_history' AND column_name <> 'date' "
+        "ORDER BY ordinal_position"
+    )
+    result = await session.scalars(query)
+    asset_list = result.all()
+    
+    return asset_list
 
-@app.get("/api/underlying_price/<ticker>")
-def underlying_price(ticker):
-    if not ticker.isidentifier():
-        return jsonify({"error": "Bad ticker"}), 400
-    q = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
-    with engine.connect() as con:
-        (price,) = con.execute(q).one()
-    return jsonify({"price": float(price)})
+
+@app.get("/api/underlying_price/{ticker}")
+async def underlying_price( 
+    ticker: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+    session: AsyncSession = Depends(get_session),
+):
+    # The isidentifier() check is crucial to prevent SQL injection
+    query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
+    price = await session.scalar(query)
+    if price is None:
+        raise HTTPException(status_code=404, detail=f"Price not found for ticker: {ticker}")
+    return {"price": float(price)}

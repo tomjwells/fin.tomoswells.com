@@ -11,8 +11,12 @@ alias pyenv="cd $HOMEDIR && python3 -m venv env && source env/bin/activate && pi
 # Run Commands
 #############################################
 alias r="export NODE_ENV=development && cd $HOMEDIR/app && bun run dev && cd $HOMEDIR || cd $HOMEDIR"
-alias runflask="export PYTHONPATH="$PYTHONPATH:$HOMEDIR" && cd $HOMEDIR/api && export FLASK_APP=index.py && export FLASK_ENV=development && flask run -p 8000 --debug || cd $HOMEDIR"
-
+alias runpy='\
+  export PYTHONPATH="$PYTHONPATH:$HOMEDIR" && \
+  cd $HOMEDIR/api && \
+  python -m uvicorn index:app --reload --host 127.0.0.1 --port 8000; \
+  cd $HOMEDIR\
+'
 
 # Misc
 alias clean="rm -rf $HOMEDIR/app/.next $HOMEDIR/app/node_modules"

@@ -43,7 +43,7 @@ pyenv
 
 The flask application may be launched using
 ```
-runflask
+runpy
 ```
 making it accessible on port `8000`.
 
