@@ -247,10 +247,10 @@ def get_option_price():
     with engine.connect() as conn:
         rows = conn.execute(query).fetchall() 
     db_duration = time.time() - db_start
-    print(f"DB Query Time: {db_duration:.4f}s, rows: {len(price_history)}")  # Logging the DB query time
+    prices = np.array([r[0] for r in rows], dtype=float)
+    print(f"DB Query Time: {db_duration:.4f}s, rows: {len(prices)}")  # Logging the DB query time
 
     # price_history = pd.DataFrame(results, columns=["Date", ticker]).set_index('Date')
-    prices = np.array([r[0] for r in rows], dtype=float)
 
     # Calculate initial price and volatility (sigma)
     # S_0 = round(price_history.tail(1)[ticker].iloc[0], 2)
