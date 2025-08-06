@@ -47,38 +47,46 @@ ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg
 if not ASYNC_DB_URL:
     raise RuntimeError("DB_CONNECTION_STRING is not set")
 
-apg_pool: asyncpg.Pool | None = None
-_pool_lock = asyncio.Lock()
 
-_cols_loaded_at = 0.0
-_COLS_TTL = 600.0  # refresh every 10 minutes (tune)
+_pools: dict[int, asyncpg.Pool] = {}
+_locks: dict[int, asyncio.Lock] = {}
 
-
-apg_pool: asyncpg.Pool | None = None
-_pool_lock = asyncio.Lock()
+def _loop_key() -> int:
+    return id(asyncio.get_running_loop())
 
 async def _ensure_pool() -> asyncpg.Pool:
-    global apg_pool
-    if apg_pool is not None:
-        return apg_pool
-    async with _pool_lock:
-        if apg_pool is not None:
-            return apg_pool
-        apg_pool = await asyncpg.create_pool(
+    key = _loop_key()
+    pool = _pools.get(key)
+    if pool and not pool._closed:
+        return pool
+    lock = _locks.setdefault(key, asyncio.Lock())
+    async with lock:
+        pool = _pools.get(key)
+        if pool and not pool._closed:
+            return pool
+        # Close all stale pools (from other loops) defensively
+        for k, p in list(_pools.items()):
+            if p and not p._closed and k != key:
+                with contextlib.suppress(Exception):
+                    await p.close()
+                _pools.pop(k, None)
+
+        pool = await asyncpg.create_pool(
             dsn=ASYNC_DB_URL,
             min_size=1,
-            max_size=int(os.getenv("PG_POOL_MAX", "3")),   # small for serverless
+            max_size=int(os.getenv("PG_POOL_MAX", "3")),
             timeout=5,
             command_timeout=15,
-            max_inactive_connection_lifetime=float(os.getenv("PG_CONN_IDLE", "10")),  # seconds
+            max_inactive_connection_lifetime=float(os.getenv("PG_CONN_IDLE", "10")),
             statement_cache_size=256,
         )
-        # optional: validate
-        async with apg_pool.acquire() as c:
+        # quick sanity check
+        async with pool.acquire() as c:
             await c.execute("SELECT 1")
-        return apg_pool
+        _pools[key] = pool
+        return pool
 
-# ✅ FastAPI yield dependency (NOT @asynccontextmanager)
+# Proper FastAPI yield dependency
 async def get_conn() -> AsyncIterator[asyncpg.Connection]:
     pool = await _ensure_pool()
     conn = await pool.acquire()
@@ -88,33 +96,34 @@ async def get_conn() -> AsyncIterator[asyncpg.Connection]:
         try:
             await pool.release(conn)
         except Exception:
-            # If release fails, drop the connection.
             with contextlib.suppress(Exception):
                 await conn.close()
 
 
 
+
 app = FastAPI()
 
-from urllib.parse import urlparse
-import socket
+from fastapi.responses import JSONResponse
+
 
 @app.get("/__status")
 async def status():
-    dsn_ok = bool(ASYNC_DB_URL)
-    host = urlparse(ASYNC_DB_URL).hostname if dsn_ok else None
+    loop_id = _loop_key()
+    pool_keys = list(_pools.keys())
     try:
-        resolved = bool(socket.getaddrinfo(host, None)) if host else False
+        pool = await _ensure_pool()
+        async with pool.acquire() as c:
+            await c.execute("SELECT 1")
+        rtt_ok = True
     except Exception:
-        resolved = False
-    pool_ready = bool(apg_pool and not apg_pool._closed)
+        rtt_ok = False
     return {
-        "env_has_dsn": dsn_ok,
-        "dsn_host": host,
-        "dns_resolved": resolved,
-        "pool_ready": pool_ready,
+        "loop_id": loop_id,
+        "pool_keys": pool_keys,
+        "roundtrip_ok": rtt_ok,
     }
-from fastapi.responses import JSONResponse
+
 
 @app.middleware("http")
 async def preview_errors(request, call_next):
