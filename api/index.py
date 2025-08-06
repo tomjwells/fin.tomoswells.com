@@ -3,6 +3,7 @@ import time
 import random
 import numpy as np
 import pandas as pd
+import asyncpg
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
@@ -14,9 +15,6 @@ from modules.derivatives.binomial_model import EUPrice, USPrice
 from modules.markowitz.main import main
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 load_dotenv() 
@@ -44,88 +42,94 @@ load_dotenv()
 #   return wrapper
 
 
-DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg2", "postgresql+asyncpg")
 
-# Create the engine at the module level
-engine = create_async_engine(DB_URL, pool_size=5, max_overflow=2)
 
-# Create the session factory at the module level
-AsyncSessionLocal = sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False
-)
+ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING")
+ASYNC_DB_URL = ASYNC_DB_URL.replace("postgresql+psycopg2", "postgresql").replace("postgres://","postgresql://",1)
 
-# --- Application Lifecycle ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Manage the application lifecycle.
-    """
-    print("Application startup.")
-    yield
-    print("Application shutdown: Disposing database engine.")
-    await engine.dispose()
+    global apg_pool, VALID_PRICE_COLUMNS
+    apg_pool = await asyncpg.create_pool(
+        dsn=ASYNC_DB_URL,
+        min_size=1, max_size=6,
+        timeout=5,
+        command_timeout=15,
+        max_inactive_connection_lifetime=60,
+        # If PgBouncer ever runs in TRANSACTION mode:
+        # statement_cache_size=0,
+    )
+    # Cache the whitelist of ticker columns once
+    async with apg_pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'price_history' AND column_name <> 'date'
+            ORDER BY ordinal_position
+        """)
+        VALID_PRICE_COLUMNS = {r["column_name"] for r in rows}
+    try:
+        yield
+    finally:
+        await apg_pool.close()
 
 app = FastAPI(lifespan=lifespan)
 
-# --- Dependency Injection ---
-async def get_session() -> AsyncSession:
-    """
-    Provides a SQLAlchemy async session for a single request.
-    """
-    async with AsyncSessionLocal() as session:
-        yield session
+async def get_conn():
+    async with apg_pool.acquire() as conn:
+        yield conn
+
 
 # Markowitz
 @app.get("/api/markowitz/main")
 async def markowitz_main(
-    assets: List[str] = Query(...),
-    start_year: int = Query(..., alias="startYear"),
-    end_year: int = Query(..., alias="endYear"),
-    r: float = Query(...),
-    allowShortSelling: bool = Query(...),
-    session: AsyncSession = Depends(get_session)
+  assets: List[str] = Query(...),
+  start_year: int = Query(..., alias="startYear"),
+  end_year: int = Query(..., alias="endYear"),
+  r: float = Query(...),
+  allowShortSelling: bool = Query(...),
 ):
 
   # Ensure all column names are safe
   safe_columns = [col for col in assets if col.isidentifier()]
-  column_list = ", ".join(f'"{col}"' for col in safe_columns)  # double quotes for Postgres identifiers
-
-  # Use SQLAlchemy bind parameters (:start_date, :end_date)
-  query = text(f"""
-    SELECT date, {column_list} FROM returns_history
-    WHERE date BETWEEN make_date(CAST(:start_year AS integer), 1, 1) AND
-      (CASE
-          WHEN CAST(:end_year AS integer) >= EXTRACT(YEAR FROM CURRENT_DATE)
-          THEN CURRENT_DATE
-          ELSE make_date(CAST(:end_year AS integer), 12, 31)
-        END)
+  
+  cols_sql = ", ".join(f'("{c}")::real AS "{c}"' for c in safe_columns)
+  sql = f"""
+    SELECT date, {cols_sql}
+    FROM returns_history
+    WHERE date BETWEEN make_date($1::int,1,1)
+      AND CASE
+            WHEN $2::int >= EXTRACT(YEAR FROM CURRENT_DATE)
+            THEN CURRENT_DATE
+            ELSE make_date($2::int,12,31)
+          END
     ORDER BY date
-  """)
+  """
 
-  print("Fetching from db")
-  db_start = time.time()
-  rows = (await session.execute(query, {"start_year": start_year, "end_year": end_year})).all()
-  db_duration = time.time() - db_start
-  print(f"DB Query Time: {db_duration:.4f}s, rows: {len(rows)}")
-  rets = pd.DataFrame(rows, columns=['date']+safe_columns)
-  rets.set_index('date', inplace=True)
+  import io
+  buf = io.BytesIO()
+  t0 = time.perf_counter()
+  async with apg_pool.acquire() as apg:
+    await apg.copy_from_query(sql, start_year, end_year, output=buf, format="csv", header=True)
+  t1 = time.perf_counter()
+  buf.seek(0)
+  rets = pd.read_csv(buf, parse_dates=["date"]).set_index("date")
+  print(f"DB Query Time: {(t1-t0):.4f}s, rows: {len(rets)}")
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
   rets_df = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1) 
 
   result = main(
-      list(rets_df.columns),
-      rets_df.to_numpy(),
-      allowShortSelling,
-      R_f=r,
+    list(rets_df.columns),
+    rets_df.to_numpy(),
+    allowShortSelling,
+    R_f=r,
   )
-
-
   return result
 
 @app.get("/api/seed_db")
-def seed_db():
+async def seed_db():
     """
     Seeds the Turso DB from local price_history.csv and returns_history.csv.
     Assumes both files are small enough to load fully into memory.
@@ -143,11 +147,14 @@ def seed_db():
             for c in price_history.columns
         ]
         price_history.set_index("Date", inplace=True)
-        price_history.to_sql("price_history", con=engine, if_exists="replace", index_label="date")
+
+        async with engine.begin() as conn:
+            await conn.run_sync(
+                lambda sync_conn: price_history.to_sql("price_history", con=sync_conn, if_exists="replace", index_label="date")
+            )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed loading price_history.csv: {e}")
 
-    print("Load and clean returns_history")
     try:
         returns_history = pd.read_csv("../returns_history.csv", parse_dates=["Date"])
         returns_history.columns = [
@@ -155,10 +162,13 @@ def seed_db():
             for c in returns_history.columns
         ]
         returns_history.set_index("Date", inplace=True)
-        returns_history.to_sql("returns_history", con=engine, if_exists="replace", index_label="date")
+        async with engine.begin() as conn:
+            await conn.run_sync(
+                lambda sync_conn: returns_history.to_sql("returns_history", con=sync_conn, if_exists="replace", index_label="date")
+            )
     except Exception as e:
-        return HTTPException(detail=f"Failed loading returns_history.csv: {str(e)}", status_code=400)
-    print("Load and clean risk_free_rate")
+        raise HTTPException(status_code=400, detail=f"Failed loading returns_history.csv: {e}")
+
     try:
         risk_free_rate = pd.read_csv("../risk_free_rate.csv", parse_dates=["Date"])
         risk_free_rate.columns = [
@@ -166,9 +176,17 @@ def seed_db():
             for c in risk_free_rate.columns
         ]
         risk_free_rate.set_index("Date", inplace=True)
-        risk_free_rate.to_sql("risk_free_rate", con=engine, if_exists="replace", index_label="date")
+        async with engine.begin() as conn:
+            await conn.run_sync(
+                lambda sync_conn: risk_free_rate.to_sql(
+                    "risk_free_rate",
+                    con=sync_conn,
+                    if_exists="replace",
+                    index_label="date",
+                )
+            )
     except Exception as e:
-        return HTTPException(detail=f"Failed loading risk_free_rate.csv: {str(e)}", status_code=400)
+        raise HTTPException(status_code=400, detail=f"Failed loading risk_free_rate.csv: {e}")
 
     return {"message": "Database seeded successfully"}
 
@@ -257,26 +275,35 @@ async def get_option_price(
     K: float = Query(...),
     ticker: str = Query(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$", description="Ticker symbol"),
     R_f: float = Query(...),
-    session: AsyncSession = Depends(get_session),
 ):
     t: datetime = datetime.now()
     if t > T:
         return HTTPException(status_code=400, detail=f"t: {t} should be less than T: {T}")
     tau = (T - t).days / 365
 
-    query = text(f'SELECT "{ticker}" FROM price_history WHERE "{ticker}" IS NOT NULL ORDER BY date')
+    import io, numpy as np
 
-    # Timing the database query
-    db_start = time.time()
-    result = await session.execute(query)
-    rows = result.fetchall()
-    prices = np.array([r[0] for r in rows], dtype=float)
-    print(f"DB Query Time: {time.time() - db_start:.4f}s, rows: {len(prices)}")
+    sql = f"""
+      SELECT "{ticker}"::real AS p
+      FROM price_history
+      WHERE "{ticker}" IS NOT NULL
+      ORDER BY date
+    """
+    buf = io.BytesIO()
+    t0 = time.perf_counter()
+    async with apg_pool.acquire() as apg:
+        await apg.copy_from_query(sql, output=buf, format="csv", header=True)
+    t1 = time.perf_counter()
+    print({"total_ms": round((t1 - t0)*1000, 1)})
 
+    buf.seek(0)
     # Calculate initial price and volatility (sigma)
-    S_0 = round(prices[-1], 2)
-    returns = prices[1:] / prices[:-1] - 1
-    sigma = np.sqrt(365) * returns.std()
+    prices = np.loadtxt(buf, delimiter=",", skiprows=1, dtype=np.float32)  # one column
+    S_0 = float(prices[-1])
+    returns = prices[1:] / prices[:-1] - 1.0
+    sigma = float(np.std(returns, ddof=1) * np.sqrt(365.0))
+    print({"apg_ms": round((t1 - t0) * 1000, 1)})
+
 
     print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
           "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
@@ -337,35 +364,35 @@ async def get_option_price(
 
 # ---------  Utility Functions   ---------
 @app.get("/api/risk_free_rate")
-async def risk_free_rate(session: AsyncSession = Depends(get_session)):
-    query = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
-    rate = await session.scalar(query)
-    if rate is None:
-        raise HTTPException(status_code=404, detail="Risk-free rate not found.")
-    return {"rate": float(rate)}
+async def risk_free_rate(conn = Depends(get_conn)):
+    val = await conn.fetchval('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
+    if val is None:
+        raise HTTPException(404, "Risk-free rate not found.")
+    return {"rate": float(val)}
+
 
 
 @app.get("/api/assets")
-async def assets(session: AsyncSession = Depends(get_session)):
-    query = text(
-        "SELECT column_name FROM information_schema.columns "
-        "WHERE table_name='price_history' AND column_name <> 'date' "
-        "ORDER BY ordinal_position"
-    )
-    result = await session.scalars(query)
-    asset_list = result.all()
-    
-    return asset_list
+async def assets(conn = Depends(get_conn)):
+    rows = await conn.fetch("""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'price_history' AND column_name <> 'date'
+        ORDER BY ordinal_position
+    """)
+    return [r["column_name"] for r in rows]
+
 
 
 @app.get("/api/underlying_price/{ticker}")
-async def underlying_price( 
-    ticker: str = Path(..., regex=r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
-    session: AsyncSession = Depends(get_session),
+async def underlying_price(
+    ticker: str = Path(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$"),
+    conn = Depends(get_conn),
 ):
-    # The isidentifier() check is crucial to prevent SQL injection
-    query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
-    price = await session.scalar(query)
+    if ticker not in VALID_PRICE_COLUMNS:
+        raise HTTPException(400, f"Unknown ticker: {ticker}")
+    sql = f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1'
+    price = await conn.fetchval(sql)
     if price is None:
-        raise HTTPException(status_code=404, detail=f"Price not found for ticker: {ticker}")
+        raise HTTPException(404, f"Price not found for ticker: {ticker}")
     return {"price": float(price)}
