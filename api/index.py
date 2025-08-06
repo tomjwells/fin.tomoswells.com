@@ -3,7 +3,7 @@ import time
 import random
 import pandas as pd
 import asyncio, anyio, asyncpg, contextlib
-# from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
 from datetime import datetime
 from modules.derivatives.monte_carlo import monte_carlo
@@ -14,11 +14,13 @@ from modules.markowitz.main import main
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-
+from typing import AsyncIterator
+import logging
 load_dotenv() 
 # import redis
 # import functools
 # import pickle
+logger = logging.getLogger("app")
 
 # r = redis.Redis.from_url(url=os.getenv("REDIS_URL").replace("redis://", "rediss://"))
 
@@ -57,44 +59,38 @@ _pool_lock = asyncio.Lock()
 
 async def _ensure_pool() -> asyncpg.Pool:
     global apg_pool
-    if apg_pool and not apg_pool._closed:
+    if apg_pool is not None:
         return apg_pool
     async with _pool_lock:
-        if apg_pool and not apg_pool._closed:
+        if apg_pool is not None:
             return apg_pool
         apg_pool = await asyncpg.create_pool(
             dsn=ASYNC_DB_URL,
-            min_size=1, max_size=6,
+            min_size=1,
+            max_size=int(os.getenv("PG_POOL_MAX", "3")),   # small for serverless
             timeout=5,
             command_timeout=15,
-            max_inactive_connection_lifetime=60,
-            # statement_cache_size=0,  # only if PgBouncer in TRANSACTION mode
+            max_inactive_connection_lifetime=float(os.getenv("PG_CONN_IDLE", "10")),  # seconds
+            statement_cache_size=256,
         )
+        # optional: validate
+        async with apg_pool.acquire() as c:
+            await c.execute("SELECT 1")
         return apg_pool
 
-async def get_conn():
+# ✅ FastAPI yield dependency (NOT @asynccontextmanager)
+async def get_conn() -> AsyncIterator[asyncpg.Connection]:
     pool = await _ensure_pool()
     conn = await pool.acquire()
     try:
         yield conn
-    except (asyncio.CancelledError, anyio.EndOfStream):
-        # Request aborted (browser refresh, platform timeout, etc.)
-        with contextlib.suppress(Exception):
-            # Optional: try to cancel the in-flight op
-            await conn.cancel()             # <- must be awaited
-        with contextlib.suppress(Exception):
-            await conn.close()              # don't return to pool
-        raise
-    except Exception:
-        # App error while using the connection → close it
-        with contextlib.suppress(Exception):
-            await conn.close()
-        raise
-    else:
-        # Happy path → return to pool
-        with contextlib.suppress(Exception):
+    finally:
+        try:
             await pool.release(conn)
-
+        except Exception:
+            # If release fails, drop the connection.
+            with contextlib.suppress(Exception):
+                await conn.close()
 
 
 
@@ -121,14 +117,14 @@ async def status():
 from fastapi.responses import JSONResponse
 
 @app.middleware("http")
-async def show_errors_in_preview(request, call_next):
+async def preview_errors(request, call_next):
     try:
         return await call_next(request)
+    except anyio.EndOfStream:
+        return JSONResponse({"error": "client closed"}, status_code=499)
     except Exception as e:
-        import os, traceback
+        logger.exception("Unhandled error for %s %s", request.method, request.url.path)
         if os.getenv("VERCEL_ENV") != "production":
-            tb = traceback.format_exc()
-            print("UNHANDLED:", tb)
             return JSONResponse({"error": str(e)}, status_code=500)
         raise
 
