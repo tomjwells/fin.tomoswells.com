@@ -2,10 +2,10 @@ import os
 import time
 import random
 import pandas as pd
-import asyncpg
-import asyncio
+import asyncio, anyio, asyncpg, contextlib
+# from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
-from datetime import date, datetime
+from datetime import datetime
 from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
 from modules.derivatives.longstaff_schwartz import longstaff_schwartz
@@ -48,9 +48,10 @@ if not ASYNC_DB_URL:
 apg_pool: asyncpg.Pool | None = None
 _pool_lock = asyncio.Lock()
 
-VALID_PRICE_COLUMNS: set[str] = set()
 _cols_loaded_at = 0.0
 _COLS_TTL = 600.0  # refresh every 10 minutes (tune)
+apg_pool: asyncpg.Pool | None = None
+_pool_lock = asyncio.Lock()
 
 async def _ensure_pool() -> asyncpg.Pool:
     global apg_pool
@@ -64,33 +65,28 @@ async def _ensure_pool() -> asyncpg.Pool:
             min_size=1, max_size=6,
             timeout=5, command_timeout=15,
             max_inactive_connection_lifetime=60,
-            # If PgBouncer is in TRANSACTION mode, uncomment:
-            # statement_cache_size=0,
+            # statement_cache_size=0,  # only if PgBouncer in TRANSACTION mode
         )
         return apg_pool
 
-async def _ensure_columns():
-    global VALID_PRICE_COLUMNS, _cols_loaded_at
-    now = time.time()
-    if VALID_PRICE_COLUMNS and (now - _cols_loaded_at) < _COLS_TTL:
-        return
-    pool = await _ensure_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name='price_history' AND column_name <> 'date'
-            ORDER BY ordinal_position
-        """)
-    VALID_PRICE_COLUMNS = {r["column_name"] for r in rows}
-    _cols_loaded_at = now
-
-# FastAPI deps
 async def get_conn():
     pool = await _ensure_pool()
-    async with pool.acquire() as conn:
+    conn = await pool.acquire()
+    try:
         yield conn
-
+    except (asyncio.CancelledError, anyio.EndOfStream):
+        with contextlib.suppress(Exception):
+            await conn.close()
+        raise
+    except Exception:
+        with contextlib.suppress(Exception):
+            await conn.close()
+        raise
+    finally:
+        # If we closed it above, is_closed() will be True and this is a no-op.
+        if not conn.is_closed():
+            with contextlib.suppress(Exception):
+                await pool.release(conn)
 
 
 
@@ -413,7 +409,7 @@ async def get_option_price(
 
 # ---------  Utility Functions   ---------
 @app.get("/api/risk_free_rate")
-async def risk_free_rate(conn = Depends(get_conn)):
+async def risk_free_rate(conn: asyncpg.Connection =  Depends(get_conn)):
     val = await conn.fetchval('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
     if val is None:
         raise HTTPException(404, "Risk-free rate not found.")
@@ -422,7 +418,7 @@ async def risk_free_rate(conn = Depends(get_conn)):
 
 
 @app.get("/api/assets")
-async def assets(conn = Depends(get_conn)):
+async def assets(conn: asyncpg.Connection =  Depends(get_conn)):
     rows = await conn.fetch("""
         SELECT column_name
         FROM information_schema.columns
@@ -436,9 +432,9 @@ async def assets(conn = Depends(get_conn)):
 @app.get("/api/underlying_price/{ticker}")
 async def underlying_price(
     ticker: str = Path(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$"),
-    conn = Depends(get_conn),
+    conn: asyncpg.Connection =  Depends(get_conn),
 ):
-    if ticker not in VALID_PRICE_COLUMNS:
+    if not ticker.isidentifier():
         raise HTTPException(400, f"Unknown ticker: {ticker}")
     sql = f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1'
     price = await conn.fetchval(sql)
