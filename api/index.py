@@ -1,11 +1,9 @@
 import os
 import time
 import random
-import numpy as np
 import pandas as pd
 import asyncpg
 import asyncio
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
 from datetime import date, datetime
 from modules.derivatives.monte_carlo import monte_carlo
@@ -139,6 +137,7 @@ async def markowitz_main(
   end_year: int = Query(..., alias="endYear"),
   r: float = Query(...),
   allowShortSelling: bool = Query(...),
+  conn: asyncpg.Connection = Depends(get_conn)
 ):
 
   # Ensure all column names are safe
@@ -160,8 +159,7 @@ async def markowitz_main(
   import io
   buf = io.BytesIO()
   t0 = time.perf_counter()
-  async with apg_pool.acquire() as apg:
-    await apg.copy_from_query(sql, start_year, end_year, output=buf, format="csv", header=True)
+  await conn.copy_from_query(sql, start_year, end_year, output=buf, format="csv", header=True)
   t1 = time.perf_counter()
   buf.seek(0)
   rets = pd.read_csv(buf, parse_dates=["date"]).set_index("date")
@@ -326,6 +324,7 @@ async def get_option_price(
     K: float = Query(...),
     ticker: str = Query(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$", description="Ticker symbol"),
     R_f: float = Query(...),
+    conn: asyncpg.Connection = Depends(get_conn)
 ):
     t: datetime = datetime.now()
     if t > T:
@@ -342,8 +341,7 @@ async def get_option_price(
     """
     buf = io.BytesIO()
     t0 = time.perf_counter()
-    async with apg_pool.acquire() as apg:
-        await apg.copy_from_query(sql, output=buf, format="csv", header=True)
+    await conn.copy_from_query(sql, output=buf, format="csv", header=True)
     t1 = time.perf_counter()
     print({"total_ms": round((t1 - t0)*1000, 1)})
 
