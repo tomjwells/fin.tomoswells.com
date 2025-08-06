@@ -121,7 +121,7 @@ async def lifespan(app: FastAPI):
     finally:
         await apg_pool.close()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 # Markowitz
 @app.get("/api/markowitz/main")
