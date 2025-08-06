@@ -50,6 +50,8 @@ _pool_lock = asyncio.Lock()
 
 _cols_loaded_at = 0.0
 _COLS_TTL = 600.0  # refresh every 10 minutes (tune)
+
+
 apg_pool: asyncpg.Pool | None = None
 _pool_lock = asyncio.Lock()
 
@@ -63,7 +65,8 @@ async def _ensure_pool() -> asyncpg.Pool:
         apg_pool = await asyncpg.create_pool(
             dsn=ASYNC_DB_URL,
             min_size=1, max_size=6,
-            timeout=5, command_timeout=15,
+            timeout=5,
+            command_timeout=15,
             max_inactive_connection_lifetime=60,
             # statement_cache_size=0,  # only if PgBouncer in TRANSACTION mode
         )
@@ -75,18 +78,23 @@ async def get_conn():
     try:
         yield conn
     except (asyncio.CancelledError, anyio.EndOfStream):
+        # Request aborted (browser refresh, platform timeout, etc.)
         with contextlib.suppress(Exception):
-            await conn.close()
+            # Optional: try to cancel the in-flight op
+            await conn.cancel()             # <- must be awaited
+        with contextlib.suppress(Exception):
+            await conn.close()              # don't return to pool
         raise
     except Exception:
+        # App error while using the connection → close it
         with contextlib.suppress(Exception):
             await conn.close()
         raise
-    finally:
-        # If we closed it above, is_closed() will be True and this is a no-op.
-        if not conn.is_closed():
-            with contextlib.suppress(Exception):
-                await pool.release(conn)
+    else:
+        # Happy path → return to pool
+        with contextlib.suppress(Exception):
+            await pool.release(conn)
+
 
 
 
@@ -155,7 +163,7 @@ async def markowitz_main(
   import io
   buf = io.BytesIO()
   t0 = time.perf_counter()
-  await conn.copy_from_query(sql, start_year, end_year, output=buf, format="csv", header=True)
+  await conn.copy_from_query(sql, start_year, end_year, output=buf, format="csv", header=True, timeout=10)
   t1 = time.perf_counter()
   buf.seek(0)
   rets = pd.read_csv(buf, parse_dates=["date"]).set_index("date")
@@ -337,7 +345,7 @@ async def get_option_price(
     """
     buf = io.BytesIO()
     t0 = time.perf_counter()
-    await conn.copy_from_query(sql, output=buf, format="csv", header=True)
+    await conn.copy_from_query(sql, output=buf, format="csv", header=True, timeout=10)
     t1 = time.perf_counter()
     print({"total_ms": round((t1 - t0)*1000, 1)})
 
