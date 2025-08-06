@@ -95,33 +95,41 @@ async def get_conn():
 
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global apg_pool, VALID_PRICE_COLUMNS
-    apg_pool = await asyncpg.create_pool(
-        dsn=ASYNC_DB_URL,
-        min_size=1, max_size=6,
-        timeout=5,
-        command_timeout=15,
-        max_inactive_connection_lifetime=60,
-        # If PgBouncer ever runs in TRANSACTION mode:
-        # statement_cache_size=0,
-    )
-    # Cache the whitelist of ticker columns once
-    async with apg_pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'price_history' AND column_name <> 'date'
-            ORDER BY ordinal_position
-        """)
-        VALID_PRICE_COLUMNS = {r["column_name"] for r in rows}
-    try:
-        yield
-    finally:
-        await apg_pool.close()
 
 app = FastAPI()
+
+from urllib.parse import urlparse
+import socket
+
+@app.get("/__status")
+async def status():
+    dsn_ok = bool(ASYNC_DB_URL)
+    host = urlparse(ASYNC_DB_URL).hostname if dsn_ok else None
+    try:
+        resolved = bool(socket.getaddrinfo(host, None)) if host else False
+    except Exception:
+        resolved = False
+    pool_ready = bool(apg_pool and not apg_pool._closed)
+    return {
+        "env_has_dsn": dsn_ok,
+        "dsn_host": host,
+        "dns_resolved": resolved,
+        "pool_ready": pool_ready,
+    }
+from fastapi.responses import JSONResponse
+
+@app.middleware("http")
+async def show_errors_in_preview(request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        import os, traceback
+        if os.getenv("VERCEL_ENV") != "production":
+            tb = traceback.format_exc()
+            print("UNHANDLED:", tb)
+            return JSONResponse({"error": str(e)}, status_code=500)
+        raise
+
 
 # Markowitz
 @app.get("/api/markowitz/main")
