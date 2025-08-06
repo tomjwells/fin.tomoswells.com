@@ -112,20 +112,47 @@ RETRYABLE = (
     ConnectionResetError,
 )
 
-async def safe_fetch(sql, *args, timeout=20, attempts=2):
+async def safe_fetch(sql, *args, timeout=2, attempts=2):
     last = None
+    per_attempt = max(1, timeout*1000 // attempts) / 1000.0
     for i in range(attempts):
         async for conn in get_conn():
             try:
-                return await conn.fetch(sql, *args, timeout=timeout)
-            except RETRYABLE as e:
+                # pre-ping with a tiny timeout; if it fails, drop this conn
+                await conn.execute("SELECT 1", timeout=0.5)
+            except Exception as e:
                 last = e
-                logger.warning(f"safe_fetch retrying ({i}): %s", repr(e))
+                logger.warning(f"pre-ping failed ({i}): %s", repr(e))
+                with contextlib.suppress(Exception):
+                    await conn.close()
+                if i == attempts - 1:
+                    break
                 await asyncio.sleep(0.05 * (2 ** i))
+                continue
+            try:
+                return await conn.fetch(sql, *args, timeout=per_attempt)
+            except RETRYABLE as e:
+                logger.warning(f"safe_fetch retrying ({i}): %s", repr(e))
+                last = e
+                # drop this conn; try again
+                with contextlib.suppress(Exception):
+                    await conn.close()
+                if i == attempts - 1:
+                    break
+                await asyncio.sleep(0.05 * (2 ** i))
+                continue
+            except asyncio.TimeoutError as e:
+                # timebox: allow a retry only if there is budget left
+                logger.warning(f"safe_fetch retrying ({i}): %s", repr(e))
+                last = e
+                if i == attempts - 1:
+                    break
+                await asyncio.sleep(0.05 * (2 ** i))
+                continue
     raise last
 
 
-async def safe_fetchval(sql, *args, timeout=20, attempts=2):
+async def safe_fetchval(sql, *args, timeout=2, attempts=2):
     last = None
     for i in range(attempts):
         async for conn in get_conn():
@@ -175,7 +202,7 @@ async def markowitz_main(
   # print(f"DB Query Time: {(t1-t0):.4f}s, rows: {len(rets)}")
 
   t0 = time.perf_counter()
-  rows = await safe_fetch(sql, start_year, end_year, timeout=20)
+  rows = await safe_fetch(sql, start_year, end_year, timeout=2)
   t1 = time.perf_counter()
   rets = pd.DataFrame([dict(r) for r in rows]).set_index("date")
   print(f"DB Query Time: {(t1-t0):.4f}s, rows: {len(rets)}")
@@ -364,7 +391,7 @@ async def get_option_price(
     # prices = np.loadtxt(buf, delimiter=",", skiprows=1, dtype=np.float32) 
 
     t0 = time.perf_counter()
-    rows = await safe_fetch(sql, timeout=12, attempts=1)
+    rows = await safe_fetch(sql, timeout=2, attempts=1)
     t1 = time.perf_counter()
     print({"total_ms": round((t1 - t0)*1000, 1)})
     prices = np.array([r["p"] for r in rows], dtype=np.float32)
