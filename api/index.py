@@ -4,7 +4,7 @@ import random
 import numpy as np
 import pandas as pd
 import asyncpg
-import logging
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
 from datetime import date, datetime
@@ -43,9 +43,57 @@ load_dotenv()
 
 
 
+ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg2","postgresql").replace("postgres://","postgresql://",1)
+if not ASYNC_DB_URL:
+    raise RuntimeError("DB_CONNECTION_STRING is not set")
 
-ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING")
-ASYNC_DB_URL = ASYNC_DB_URL.replace("postgresql+psycopg2", "postgresql").replace("postgres://","postgresql://",1)
+apg_pool: asyncpg.Pool | None = None
+_pool_lock = asyncio.Lock()
+
+VALID_PRICE_COLUMNS: set[str] = set()
+_cols_loaded_at = 0.0
+_COLS_TTL = 600.0  # refresh every 10 minutes (tune)
+
+async def _ensure_pool() -> asyncpg.Pool:
+    global apg_pool
+    if apg_pool and not apg_pool._closed:
+        return apg_pool
+    async with _pool_lock:
+        if apg_pool and not apg_pool._closed:
+            return apg_pool
+        apg_pool = await asyncpg.create_pool(
+            dsn=ASYNC_DB_URL,
+            min_size=1, max_size=6,
+            timeout=5, command_timeout=15,
+            max_inactive_connection_lifetime=60,
+            # If PgBouncer is in TRANSACTION mode, uncomment:
+            # statement_cache_size=0,
+        )
+        return apg_pool
+
+async def _ensure_columns():
+    global VALID_PRICE_COLUMNS, _cols_loaded_at
+    now = time.time()
+    if VALID_PRICE_COLUMNS and (now - _cols_loaded_at) < _COLS_TTL:
+        return
+    pool = await _ensure_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='price_history' AND column_name <> 'date'
+            ORDER BY ordinal_position
+        """)
+    VALID_PRICE_COLUMNS = {r["column_name"] for r in rows}
+    _cols_loaded_at = now
+
+# FastAPI deps
+async def get_conn():
+    pool = await _ensure_pool()
+    async with pool.acquire() as conn:
+        yield conn
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -74,11 +122,6 @@ async def lifespan(app: FastAPI):
         await apg_pool.close()
 
 app = FastAPI(lifespan=lifespan)
-
-async def get_conn():
-    async with apg_pool.acquire() as conn:
-        yield conn
-
 
 # Markowitz
 @app.get("/api/markowitz/main")
