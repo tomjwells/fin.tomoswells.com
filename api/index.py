@@ -50,9 +50,27 @@ if not ASYNC_DB_URL:
     raise RuntimeError("DB_CONNECTION_STRING is not set")
 
 from sqlalchemy.ext.asyncio import create_async_engine
-engine = create_async_engine(ASYNC_DB_URL)
+# engine = create_async_engine(ASYNC_DB_URL)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Code to run on application startup ---
+    # Create the engine here, so it's tied to the application's event loop
+    print("Lifespan startup: Creating database engine.")
+    app.state.engine = create_async_engine(ASYNC_DB_URL)
+    
+    yield  # The application runs while the 'yield' is active
+    
+    # --- Code to run on application shutdown ---
+    # Gracefully close all connections in the engine's pool
+    print("Lifespan shutdown: Disposing database engine.")
+    await app.state.engine.dispose()
+
+
+# Attach the lifespan manager to your FastAPI app
+app = FastAPI(lifespan=lifespan)
+
+# app = FastAPI()
 @app.middleware("http")
 async def preview_errors(request, call_next):
     try:
@@ -68,6 +86,7 @@ async def preview_errors(request, call_next):
 # Markowitz
 @app.get("/api/markowitz/main")
 async def markowitz_main(
+  request: Request,
   assets: List[str] = Query(...),
   start_year: int = Query(..., alias="startYear"),
   end_year: int = Query(..., alias="endYear"),
@@ -92,6 +111,7 @@ async def markowitz_main(
   """)
 
   t0 = time.perf_counter()
+  engine = request.app.state.engine
   async with engine.connect() as conn:
     rows = await conn.execute(query, {"start_year": start_year, "end_year": end_year})
   t1 = time.perf_counter()
@@ -112,7 +132,7 @@ async def markowitz_main(
   return result
 
 @app.get("/api/seed_db")
-async def seed_db():
+async def seed_db(request: Request,):
     """
     Seeds the Turso DB from local price_history.csv and returns_history.csv.
     Assumes both files are small enough to load fully into memory.
@@ -251,104 +271,107 @@ def download_data(ticker: str) -> pd.Series:
 # Route for option-price
 @app.get("/api/derivatives/option-price")
 async def get_option_price(
-    option_type: Literal['european', 'american'] = Query(..., alias="optionType"),
-    method: Literal['binomial', 'black-scholes', 'monte-carlo', 'longstaff-schwartz'] = Query(...),
-    instrument: Literal['call', 'put'] = Query(...),
-    T: datetime = Query(..., description="Exercise date in YYYY-MM-DD"),
-    K: float = Query(...),
-    ticker: str = Query(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$", description="Ticker symbol"),
-    R_f: float = Query(...),
+  request: Request,
+  option_type: Literal['european', 'american'] = Query(..., alias="optionType"),
+  method: Literal['binomial', 'black-scholes', 'monte-carlo', 'longstaff-schwartz'] = Query(...),
+  instrument: Literal['call', 'put'] = Query(...),
+  T: datetime = Query(..., description="Exercise date in YYYY-MM-DD"),
+  K: float = Query(...),
+  ticker: str = Query(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$", description="Ticker symbol"),
+  R_f: float = Query(...),
 ):
-    t: datetime = datetime.now()
-    if t > T:
-        return HTTPException(status_code=400, detail=f"t: {t} should be less than T: {T}")
-    tau = (T - t).days / 365
+  t: datetime = datetime.now()
+  if t > T:
+      return HTTPException(status_code=400, detail=f"t: {t} should be less than T: {T}")
+  tau = (T - t).days / 365
 
 
-    query = text(f"""
-      SELECT "{ticker}"::real AS p
-      FROM price_history
-      WHERE "{ticker}" IS NOT NULL
-      ORDER BY date
-    """)
+  query = text(f"""
+    SELECT "{ticker}"::real AS p
+    FROM price_history
+    WHERE "{ticker}" IS NOT NULL
+    ORDER BY date
+  """)
 
-    t0 = time.perf_counter()
-    async with engine.connect() as conn:
-        result = (await conn.execute(query)).all()
-    t1 = time.perf_counter()
-    print({"total_ms": round((t1 - t0)*1000, 1)})
-    prices = np.array([r[0] for r in result], dtype=np.float32)
-    print(prices)
-
-
-    # Calculate initial price and volatility (sigma)
-    S_0 = float(prices[-1])
-    returns = prices[1:] / prices[:-1] - 1.0
-    sigma = float(np.std(returns, ddof=1) * np.sqrt(365.0))
-    print({"apg_ms": round((t1 - t0) * 1000, 1)})
+  t0 = time.perf_counter()
+  engine = request.app.state.engine
+  async with engine.connect() as conn:
+      result = (await conn.execute(query)).all()
+  t1 = time.perf_counter()
+  print({"total_ms": round((t1 - t0)*1000, 1)})
+  prices = np.array([r[0] for r in result], dtype=np.float32)
+  print(prices)
 
 
-    print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
-          "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
+  # Calculate initial price and volatility (sigma)
+  S_0 = float(prices[-1])
+  returns = prices[1:] / prices[:-1] - 1.0
+  sigma = float(np.std(returns, ddof=1) * np.sqrt(365.0))
+  print({"apg_ms": round((t1 - t0) * 1000, 1)})
 
-    binomial_num_steps = int(1e3)
-    binomial_num_trials = int(1e5)
-    monte_carlo_num_timesteps = 100
-    longstaff_schwartz_num_trials = int(1e5)
-    longstaff_schwartz_num_timesteps = 100
 
-    # Timing the option price calculation
-    calc_start_time = time.time()
-    match (method, option_type):
-        case "binomial", "european":
-            result = EUPrice(instrument, S_0, sigma, R_f, K, tau, binomial_num_steps)
+  print("S_0: ", S_0, "sigma: ", sigma, "R_f: ", R_f, "K: ", K, "tau: ", tau,
+        "method: ", method, "option_type: ", option_type, "instrument: ", instrument)
 
-        case "binomial", "american":
-            result = USPrice(instrument, S_0, sigma, R_f, K, tau, binomial_num_steps)
+  binomial_num_steps = int(1e3)
+  binomial_num_trials = int(1e5)
+  monte_carlo_num_timesteps = 100
+  longstaff_schwartz_num_trials = int(1e5)
+  longstaff_schwartz_num_timesteps = 100
 
-        case "black-scholes", "european":
-            bs = black_scholes_option(S_0, K, tau, R_f, sigma)
-            result = bs.value(instrument)
+  # Timing the option price calculation
+  calc_start_time = time.time()
+  match (method, option_type):
+      case "binomial", "european":
+          result = EUPrice(instrument, S_0, sigma, R_f, K, tau, binomial_num_steps)
 
-        case "black-scholes", "american":
-            result = {"error": "American options are not supported"}
+      case "binomial", "american":
+          result = USPrice(instrument, S_0, sigma, R_f, K, tau, binomial_num_steps)
 
-        case "monte-carlo", "european":
-            result = monte_carlo(
-                instrument,
-                S_0, K, tau, R_f, sigma,
-                num_trials=binomial_num_trials,
-                num_timesteps=monte_carlo_num_timesteps,
-                seed=random.randint(0, int(1e6)),
-            )
+      case "black-scholes", "european":
+          bs = black_scholes_option(S_0, K, tau, R_f, sigma)
+          result = bs.value(instrument)
 
-        case "monte-carlo", "american":
-            result = {"error": "American options are not supported"}
+      case "black-scholes", "american":
+          result = {"error": "American options are not supported"}
 
-        case "longstaff-schwartz", "american":
-            result = longstaff_schwartz(
-                instrument,
-                S_0, K, tau, R_f, sigma,
-                num_trials=longstaff_schwartz_num_trials,
-                num_timesteps=longstaff_schwartz_num_timesteps,
-                seed=random.randint(0, int(1e6)),
-            )
+      case "monte-carlo", "european":
+          result = monte_carlo(
+              instrument,
+              S_0, K, tau, R_f, sigma,
+              num_trials=binomial_num_trials,
+              num_timesteps=monte_carlo_num_timesteps,
+              seed=random.randint(0, int(1e6)),
+          )
 
-        case "longstaff-schwartz", "european":
-            result = {"error": "European options are not supported"}
+      case "monte-carlo", "american":
+          result = {"error": "American options are not supported"}
 
-        case _:
-            raise ValueError(f"Unsupported method/option_type combination: {method!r}/{option_type!r}")
+      case "longstaff-schwartz", "american":
+          result = longstaff_schwartz(
+              instrument,
+              S_0, K, tau, R_f, sigma,
+              num_trials=longstaff_schwartz_num_trials,
+              num_timesteps=longstaff_schwartz_num_timesteps,
+              seed=random.randint(0, int(1e6)),
+          )
 
-    calc_duration = time.time() - calc_start_time
-    print("Calculation Time: {:.4f}s".format(calc_duration))  # Logging the calculation time
+      case "longstaff-schwartz", "european":
+          result = {"error": "European options are not supported"}
 
-    return result
+      case _:
+          raise ValueError(f"Unsupported method/option_type combination: {method!r}/{option_type!r}")
+
+  calc_duration = time.time() - calc_start_time
+  print("Calculation Time: {:.4f}s".format(calc_duration))  # Logging the calculation time
+
+  return result
 
 # ---------  Utility Functions   ---------
 @app.get("/api/risk_free_rate")
-async def risk_free_rate():
+async def risk_free_rate(request: Request,):
     query = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
+    engine = request.app.state.engine
     async with engine.connect() as conn:
        result = await conn.execute(query)
     r_f = result.scalar_one_or_none()
@@ -359,13 +382,14 @@ async def risk_free_rate():
 
 
 @app.get("/api/assets")
-async def assets():
+async def assets(request: Request,):
     query = text("""
         SELECT column_name
         FROM information_schema.columns
         WHERE table_name = 'price_history' AND column_name <> 'date'
         ORDER BY ordinal_position
     """)
+    engine = request.app.state.engine
     async with engine.connect() as conn:
        result = await conn.execute(query)
     assets = [row[0] for row in result]
@@ -375,11 +399,13 @@ async def assets():
 
 @app.get("/api/underlying_price/{ticker}")
 async def underlying_price(
-    ticker: str = Path(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$"),
+  request: Request,
+  ticker: str = Path(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$"),
 ):
     if not ticker.isidentifier():
         raise HTTPException(400, f"Unknown ticker: {ticker}")
     query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
+    engine = request.app.state.engine
     async with engine.connect() as conn:
         result = await conn.execute(query)
     price = result.scalar_one_or_none()
