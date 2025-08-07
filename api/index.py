@@ -2,7 +2,7 @@ import os
 import time
 import random
 import pandas as pd
-import asyncio, anyio, asyncpg, contextlib
+import numpy as np
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
 from datetime import datetime
@@ -14,8 +14,8 @@ from modules.markowitz.main import main
 from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-from typing import AsyncIterator
 import logging
+from sqlalchemy import text
 load_dotenv() 
 # import redis
 # import functools
@@ -43,126 +43,12 @@ logger = logging.getLogger("app")
 
 
 
-ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg2","postgresql").replace("postgres://","postgresql://",1)
+ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg2","postgresql+asyncpg")
 if not ASYNC_DB_URL:
     raise RuntimeError("DB_CONNECTION_STRING is not set")
 
-
-_pools: dict[int, asyncpg.Pool] = {}
-_locks: dict[int, asyncio.Lock] = {}
-
-def _loop_key() -> int:
-    return id(asyncio.get_running_loop())
-
-async def _ensure_pool() -> asyncpg.Pool:
-  key = _loop_key()
-  pool = _pools.get(key)
-  if pool and not pool._closed:
-      return pool
-  lock = _locks.setdefault(key, asyncio.Lock())
-  async with lock:
-      pool = _pools.get(key)
-      if pool and not pool._closed:
-          return pool
-      # Close all stale pools (from other loops) defensively
-      for k, p in list(_pools.items()):
-          if p and not p._closed and k != key:
-              with contextlib.suppress(Exception):
-                  await p.close()
-              _pools.pop(k, None)
-
-      pool = await asyncpg.create_pool(
-          dsn=ASYNC_DB_URL,
-          min_size=1,
-          max_size=int(os.getenv("PG_POOL_MAX", "3")),
-          timeout=5,
-          command_timeout=15,
-          max_inactive_connection_lifetime=float(os.getenv("PG_CONN_IDLE", "10")),
-          statement_cache_size=256,
-      )
-      # quick sanity check
-      async with pool.acquire() as c:
-          await c.execute("SELECT 1")
-      _pools[key] = pool
-      return pool
-
-async def get_conn() -> AsyncIterator[asyncpg.Connection]:
-    pool = await _ensure_pool()
-    conn = await pool.acquire()
-    released = False
-    try:
-        yield conn
-    except (asyncio.CancelledError, anyio.EndOfStream):
-        # client went away — drop the connection
-        with contextlib.suppress(Exception):
-            await conn.close()
-        released = True
-        raise
-    finally:
-        if not released:
-            try:
-                await pool.release(conn)
-            except Exception:
-                with contextlib.suppress(Exception):
-                    await conn.close()
-
-RETRYABLE = (
-    asyncpg.ConnectionDoesNotExistError,
-    asyncpg.InterfaceError,
-    ConnectionResetError,
-)
-
-async def safe_fetch(sql, *args, timeout=2, attempts=2):
-    last = None
-    per_attempt = max(1, timeout*1000 // attempts) / 1000.0
-    for i in range(attempts):
-        async for conn in get_conn():
-            try:
-                # pre-ping with a tiny timeout; if it fails, drop this conn
-                await conn.execute("SELECT 1", timeout=0.5)
-            except Exception as e:
-                last = e
-                logger.warning(f"pre-ping failed ({i}): %s", repr(e))
-                with contextlib.suppress(Exception):
-                    await conn.close()
-                if i == attempts - 1:
-                    break
-                await asyncio.sleep(0.05 * (2 ** i))
-                continue
-            try:
-                return await conn.fetch(sql, *args, timeout=per_attempt)
-            except RETRYABLE as e:
-                logger.warning(f"safe_fetch retrying ({i}): %s", repr(e))
-                last = e
-                # drop this conn; try again
-                with contextlib.suppress(Exception):
-                    await conn.close()
-                if i == attempts - 1:
-                    break
-                await asyncio.sleep(0.05 * (2 ** i))
-                continue
-            except asyncio.TimeoutError as e:
-                # timebox: allow a retry only if there is budget left
-                logger.warning(f"safe_fetch retrying ({i}): %s", repr(e))
-                last = e
-                if i == attempts - 1:
-                    break
-                await asyncio.sleep(0.05 * (2 ** i))
-                continue
-    raise last
-
-
-async def safe_fetchval(sql, *args, timeout=2, attempts=2):
-    last = None
-    for i in range(attempts):
-        async for conn in get_conn():
-            try:
-                return await conn.fetchval(sql, *args, timeout=timeout)
-            except RETRYABLE as e:
-                last = e
-                await asyncio.sleep(0.05 * (2 ** i))
-    raise last
-
+from sqlalchemy.ext.asyncio import create_async_engine
+engine = create_async_engine(ASYNC_DB_URL)
 
 app = FastAPI()
 
@@ -180,33 +66,25 @@ async def markowitz_main(
   safe_columns = [col for col in assets if col.isidentifier()]
   
   cols_sql = ", ".join(f'("{c}")::real AS "{c}"' for c in safe_columns)
-  sql = f"""
+  query = text(f"""
     SELECT date, {cols_sql}
     FROM returns_history
-    WHERE date BETWEEN make_date($1::int,1,1)
+    WHERE date BETWEEN make_date(CAST(:start_year AS integer),1,1)
       AND CASE
-            WHEN $2::int >= EXTRACT(YEAR FROM CURRENT_DATE)
+            WHEN CAST(:end_year AS integer) >= EXTRACT(YEAR FROM CURRENT_DATE)
             THEN CURRENT_DATE
-            ELSE make_date($2::int,12,31)
+            ELSE make_date(CAST(:end_year AS integer),12,31)
           END
     ORDER BY date
-  """
-
-  # import io
-  # buf = io.BytesIO()
-  # t0 = time.perf_counter()
-  # await conn.copy_from_query(sql, start_year, end_year, output=buf, format="csv", header=True, timeout=10)
-  # t1 = time.perf_counter()
-  # buf.seek(0)
-  # rets = pd.read_csv(buf, parse_dates=["date"]).set_index("date")
-  # print(f"DB Query Time: {(t1-t0):.4f}s, rows: {len(rets)}")
+  """)
 
   t0 = time.perf_counter()
-  rows = await safe_fetch(sql, start_year, end_year, timeout=2)
+  async with engine.connect() as conn:
+    rows = await conn.execute(query, {"start_year": start_year, "end_year": end_year})
   t1 = time.perf_counter()
-  rets = pd.DataFrame([dict(r) for r in rows]).set_index("date")
+  result = rows.all()
+  rets = pd.DataFrame(result).set_index("date")
   print(f"DB Query Time: {(t1-t0):.4f}s, rows: {len(rets)}")
-
 
   # Verify all columns contain numbers, if not we discard the column
   # This can happen if a ticker began trading after the date range
@@ -373,28 +251,21 @@ async def get_option_price(
         return HTTPException(status_code=400, detail=f"t: {t} should be less than T: {T}")
     tau = (T - t).days / 365
 
-    import io, numpy as np
 
-    sql = f"""
+    query = text(f"""
       SELECT "{ticker}"::real AS p
       FROM price_history
       WHERE "{ticker}" IS NOT NULL
       ORDER BY date
-    """
-
-    # buf = io.BytesIO()
-    # t0 = time.perf_counter()
-    # await conn.copy_from_query(sql, output=buf, format="csv", header=True, timeout=10)
-    # t1 = time.perf_counter()
-    # print({"total_ms": round((t1 - t0)*1000, 1)})
-    # buf.seek(0)
-    # prices = np.loadtxt(buf, delimiter=",", skiprows=1, dtype=np.float32) 
+    """)
 
     t0 = time.perf_counter()
-    rows = await safe_fetch(sql, timeout=2, attempts=1)
+    async with engine.connect() as conn:
+        result = (await conn.execute(query)).all()
     t1 = time.perf_counter()
     print({"total_ms": round((t1 - t0)*1000, 1)})
-    prices = np.array([r["p"] for r in rows], dtype=np.float32)
+    prices = np.array([r[0] for r in result], dtype=np.float32)
+    print(prices)
 
 
     # Calculate initial price and volatility (sigma)
@@ -464,22 +335,28 @@ async def get_option_price(
 # ---------  Utility Functions   ---------
 @app.get("/api/risk_free_rate")
 async def risk_free_rate():
-    val = await safe_fetchval('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
-    if val is None:
+    query = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
+    async with engine.connect() as conn:
+       result = await conn.execute(query)
+    r_f = result.scalar_one_or_none()
+    if r_f is None:
         raise HTTPException(404, "Risk-free rate not found.")
-    return {"rate": float(val)}
+    return {"rate": float(r_f)}
 
 
 
 @app.get("/api/assets")
 async def assets():
-    rows = await safe_fetch("""
+    query = text("""
         SELECT column_name
         FROM information_schema.columns
         WHERE table_name = 'price_history' AND column_name <> 'date'
         ORDER BY ordinal_position
     """)
-    return [r["column_name"] for r in rows]
+    async with engine.connect() as conn:
+       result = await conn.execute(query)
+    assets = [row[0] for row in result]
+    return assets
 
 
 
@@ -489,7 +366,10 @@ async def underlying_price(
 ):
     if not ticker.isidentifier():
         raise HTTPException(400, f"Unknown ticker: {ticker}")
-    price = await safe_fetchval(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
+    query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
+    async with engine.connect() as conn:
+        result = await conn.execute(query)
+    price = result.scalar_one_or_none()
     if price is None:
-        raise HTTPException(404, f"Price not found for ticker: {ticker}")
-    return {"price": float(price)}
+        raise HTTPException(status_code=404, detail=f"Price data not found for ticker: {ticker}")
+    return {"price": price}
