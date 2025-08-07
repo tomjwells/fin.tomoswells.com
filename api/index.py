@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Request
+from fastapi.responses import JSONResponse
 from datetime import datetime
 from modules.derivatives.monte_carlo import monte_carlo
 from modules.derivatives.black_scholes import black_scholes_option
@@ -15,6 +16,7 @@ from typing import List, Literal
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 import logging
+import anyio
 from sqlalchemy import text
 load_dotenv() 
 # import redis
@@ -51,6 +53,17 @@ from sqlalchemy.ext.asyncio import create_async_engine
 engine = create_async_engine(ASYNC_DB_URL)
 
 app = FastAPI()
+@app.middleware("http")
+async def preview_errors(request, call_next):
+    try:
+        return await call_next(request)
+    except anyio.EndOfStream:
+        return JSONResponse({"error": "client closed"}, status_code=499)
+    except Exception as e:
+        logger.exception("Unhandled error for %s %s", request.method, request.url.path)
+        if os.getenv("VERCEL_ENV") != "production":
+            return JSONResponse({"error": str(e)}, status_code=500)
+        raise
 
 # Markowitz
 @app.get("/api/markowitz/main")
