@@ -49,26 +49,24 @@ ASYNC_DB_URL = os.getenv("DB_CONNECTION_STRING", "").replace("postgresql+psycopg
 if not ASYNC_DB_URL:
     raise RuntimeError("DB_CONNECTION_STRING is not set")
 
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 # engine = create_async_engine(ASYNC_DB_URL)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # --- Code to run on application startup ---
-    # Create the engine here, so it's tied to the application's event loop
-    print("Lifespan startup: Creating database engine.")
-    app.state.engine = create_async_engine(ASYNC_DB_URL)
-    
-    yield  # The application runs while the 'yield' is active
-    
-    # --- Code to run on application shutdown ---
-    # Gracefully close all connections in the engine's pool
-    print("Lifespan shutdown: Disposing database engine.")
-    await app.state.engine.dispose()
+from typing import AsyncGenerator
+async def get_engine() -> AsyncGenerator[AsyncEngine, None]:
+    """
+    Dependency that creates and disposes of an engine for each request.
+    This is the workaround for Vercel's lack of lifespan support.
+    """
+    engine = create_async_engine(ASYNC_DB_URL)
+    try:
+        yield engine
+    finally:
+        # Gracefully close all connections in the engine's pool
+        await engine.dispose()
 
 
 # Attach the lifespan manager to your FastAPI app
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 # app = FastAPI()
 @app.middleware("http")
@@ -86,7 +84,7 @@ async def preview_errors(request, call_next):
 # Markowitz
 @app.get("/api/markowitz/main")
 async def markowitz_main(
-  request: Request,
+  engine: AsyncEngine = Depends(get_engine),
   assets: List[str] = Query(...),
   start_year: int = Query(..., alias="startYear"),
   end_year: int = Query(..., alias="endYear"),
@@ -111,7 +109,7 @@ async def markowitz_main(
   """)
 
   t0 = time.perf_counter()
-  engine = request.app.state.engine
+  
   async with engine.connect() as conn:
     rows = await conn.execute(query, {"start_year": start_year, "end_year": end_year})
   t1 = time.perf_counter()
@@ -132,7 +130,7 @@ async def markowitz_main(
   return result
 
 @app.get("/api/seed_db")
-async def seed_db(request: Request,):
+async def seed_db(engine: AsyncEngine = Depends(get_engine),):
     """
     Seeds the Turso DB from local price_history.csv and returns_history.csv.
     Assumes both files are small enough to load fully into memory.
@@ -271,7 +269,7 @@ def download_data(ticker: str) -> pd.Series:
 # Route for option-price
 @app.get("/api/derivatives/option-price")
 async def get_option_price(
-  request: Request,
+  engine: AsyncEngine = Depends(get_engine),
   option_type: Literal['european', 'american'] = Query(..., alias="optionType"),
   method: Literal['binomial', 'black-scholes', 'monte-carlo', 'longstaff-schwartz'] = Query(...),
   instrument: Literal['call', 'put'] = Query(...),
@@ -294,7 +292,7 @@ async def get_option_price(
   """)
 
   t0 = time.perf_counter()
-  engine = request.app.state.engine
+  
   async with engine.connect() as conn:
       result = (await conn.execute(query)).all()
   t1 = time.perf_counter()
@@ -369,9 +367,9 @@ async def get_option_price(
 
 # ---------  Utility Functions   ---------
 @app.get("/api/risk_free_rate")
-async def risk_free_rate(request: Request,):
+async def risk_free_rate(engine: AsyncEngine = Depends(get_engine),):
     query = text('SELECT "Adj Close" FROM risk_free_rate ORDER BY date DESC LIMIT 1')
-    engine = request.app.state.engine
+    
     async with engine.connect() as conn:
        result = await conn.execute(query)
     r_f = result.scalar_one_or_none()
@@ -382,14 +380,14 @@ async def risk_free_rate(request: Request,):
 
 
 @app.get("/api/assets")
-async def assets(request: Request,):
+async def assets(engine: AsyncEngine = Depends(get_engine),):
     query = text("""
         SELECT column_name
         FROM information_schema.columns
         WHERE table_name = 'price_history' AND column_name <> 'date'
         ORDER BY ordinal_position
     """)
-    engine = request.app.state.engine
+    
     async with engine.connect() as conn:
        result = await conn.execute(query)
     assets = [row[0] for row in result]
@@ -399,13 +397,13 @@ async def assets(request: Request,):
 
 @app.get("/api/underlying_price/{ticker}")
 async def underlying_price(
-  request: Request,
+  engine: AsyncEngine = Depends(get_engine),
   ticker: str = Path(..., regex=r"^[A-Za-z_][A-Za-z0-9_]*$"),
 ):
     if not ticker.isidentifier():
         raise HTTPException(400, f"Unknown ticker: {ticker}")
     query = text(f'SELECT "{ticker}" FROM price_history ORDER BY date DESC LIMIT 1')
-    engine = request.app.state.engine
+    
     async with engine.connect() as conn:
         result = await conn.execute(query)
     price = result.scalar_one_or_none()
