@@ -11,7 +11,7 @@ import { InfoCircledIcon } from '@radix-ui/react-icons'
 import { fetchAssets, fetchRiskFreeRate, fetchUnderlyingPrice, } from '~/utils/fetchers'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge' 
+// export const runtime = 'edge' 
 
 type Method = {
   label: string

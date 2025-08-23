@@ -13,7 +13,7 @@ import ResultsSection             from './_components/ResultsSection'
 import { fetchAssets, fetchRiskFreeRate } from '~/utils/fetchers'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge' 
+// export const runtime = 'edge' 
 
 const pageParamsSchema = z.object({
   assets: z.array(z.string()).optional().default([]),
