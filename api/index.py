@@ -47,7 +47,7 @@ app = FastAPI()
 # Useful middleware for debugging 
 @app.middleware("http")
 async def preview_errors(request, call_next):
-  if app.debug:
+  if not app.debug:
     try:
       return await call_next(request)
     except anyio.EndOfStream:

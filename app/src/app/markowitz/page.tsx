@@ -33,6 +33,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
     console.log({searchParams: resolvedSearchParams, pageParams, success}) // Log to server
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets(), fetchRiskFreeRate()])
+    console.log("assets and riskFreeRate returned successfully")
     getRandomElements(assets, 40).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
