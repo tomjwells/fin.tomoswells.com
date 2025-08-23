@@ -86,7 +86,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
 
         <Flex direction='column' gap='2' className='my-4'>
           <div>
-            <Heading size='3'>Goal Return / Risk free rate</Heading>
+            <Heading size='3'>Risk free rate</Heading>
             <Suspense>
               <Text size='2'>
                 The risk free rate is used to calculate the tangency portfolio. The 3-month U.S. Treasury bill has a current yield of {(100 * (await fetchRiskFreeRate())).toFixed(2)}%.

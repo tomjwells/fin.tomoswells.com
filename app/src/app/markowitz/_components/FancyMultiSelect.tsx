@@ -99,7 +99,7 @@ export default function FancyMultiSelect({ assetsPromise, pageParams: pageParams
           onKeyDown={(e) => {if (e.key === 'Enter') setSelected(getRandomElements(assets, randomizeCount))}}
         >
           <TextField.Slot>
-            <Tooltip content="The number of assets output by the Randomize button. Min: 2, Max: 500.">
+            <Tooltip content="Controls the number of assets output by the Randomize button. Min: 2, Max: 500.">
               <IconButton variant='ghost' color='gray'>
                 <InfoCircledIcon  height="16" width="16" />
               </IconButton>

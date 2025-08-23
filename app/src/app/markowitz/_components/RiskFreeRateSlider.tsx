@@ -6,8 +6,8 @@ import { useTransition, useState } from 'react'
 import { PageParams } from '../page'
 
 const SLIDER_MIN = 0
-const SLIDER_MAX = 20
-const DEBOUNCE_TIME = 150
+const SLIDER_MAX = 10
+const DEBOUNCE_TIME = 300
 
 export default function RiskFreeRateSlider(pageParams: PageParams) {
   const router = useRouter()
@@ -16,6 +16,7 @@ export default function RiskFreeRateSlider(pageParams: PageParams) {
 
   const [value, setValue] = React.useState<number>(100 * pageParams.r)
   const handleInputChange = (value: number) => {
+    console.log({ value })
     if (value >= 0) {
       setValue(value)
       if (timer) {
@@ -26,11 +27,11 @@ export default function RiskFreeRateSlider(pageParams: PageParams) {
         setTimeout(() => {
           startTransition(() => {
             const queryParams = new URLSearchParams()
-            pageParams.assets.forEach((asset) => queryParams.append('assets', asset))
+            queryParams.set('r', (value / 100).toFixed(6))
             queryParams.append('startYear', `${pageParams.startYear}`)
             queryParams.append('endYear', `${pageParams.endYear}`)
-            queryParams.set('r', (value / 100).toFixed(6))
             queryParams.append('allowShortSelling', `${pageParams.allowShortSelling}`)
+            pageParams.assets.forEach((asset) => queryParams.append('assets', asset))
             router.push(`?${queryParams}`, { scroll: false })
           })
         }, DEBOUNCE_TIME)
@@ -46,13 +47,13 @@ export default function RiskFreeRateSlider(pageParams: PageParams) {
       </TextField.Root>
       <Slider
         variant='classic'
-        defaultValue={[value * (SLIDER_MAX - SLIDER_MIN)]}
-        value={[value * (SLIDER_MAX - SLIDER_MIN)]}
+        defaultValue={[value*100/(SLIDER_MAX - SLIDER_MIN)]}
+        value={[value*100/(SLIDER_MAX - SLIDER_MIN)]}
         style={{ width: 300 }}
         draggable
-        onValueChange={(value) => {
-          setValue(value[0]! / (SLIDER_MAX - SLIDER_MIN))
-          handleInputChange(value[0]! / (SLIDER_MAX - SLIDER_MIN))
+        onValueChange={(v) => {
+          setValue(v[0]! * (SLIDER_MAX - SLIDER_MIN) / 100)
+          handleInputChange(v[0]! * (SLIDER_MAX - SLIDER_MIN) / 100)
         }}
       />
     </Flex>
