@@ -95,12 +95,15 @@ async def markowitz_main(
   rets = pd.DataFrame(result).set_index("date")
   rets_df = rets.apply(pd.to_numeric, errors='coerce').dropna(axis=1) 
 
+  t0 = time.perf_counter()
   result = markowitz.main(
     list(rets_df.columns),
     rets_df.to_numpy(),
     allowShortSelling,
     R_f=r,
   )
+  t1 = time.perf_counter()
+  print(f"Markowtize Computation Time: {(t1-t0):.4f}s, Num Assets: {len(assets)}, Allow Short Selling: {allowShortSelling}")
   return result
 
 

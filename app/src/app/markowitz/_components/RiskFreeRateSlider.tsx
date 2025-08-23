@@ -6,7 +6,7 @@ import { useTransition, useState } from 'react'
 import { PageParams } from '../page'
 
 const SLIDER_MIN = 0
-const SLIDER_MAX = 10
+const SLIDER_MAX = 20
 const DEBOUNCE_TIME = 150
 
 export default function RiskFreeRateSlider(pageParams: PageParams) {

@@ -2,12 +2,12 @@
 
 import * as React from 'react'
 import { tickers } from '~/data'
-import { ShuffleIcon, Cross2Icon as X } from '@radix-ui/react-icons'
+import { InfoCircledIcon, MagnifyingGlassIcon, ShuffleIcon, Cross2Icon as X } from '@radix-ui/react-icons'
 import { Command, CommandGroup, CommandItem } from '~/shadcn/Command'
 import { Command as CommandPrimitive } from 'cmdk'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PageParams } from '../page'
-import { Spinner, Badge, Flex, Button } from '@radix-ui/themes'
+import { Spinner, Badge, Flex, Button, TextField, Popover, IconButton, Text, Tooltip } from '@radix-ui/themes'
 import { Trash2 } from 'lucide-react'
 
 const DEBOUNCE_TIME = 150
@@ -29,6 +29,7 @@ export default function FancyMultiSelect({ assetsPromise, pageParams: pageParams
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [open, setOpen] = React.useState(false)
   const [selected, setSelected] = React.useState<PageParams['assets']>(selectedAssets)
+  const [randomizeCount, setRandomizeCount] = React.useState<number>(100)
   const [inputValue, setInputValue] = React.useState('')
   const [isPending, startTransition] = React.useTransition()
   const [timer, setTimer] = React.useState<NodeJS.Timeout | null>(null)
@@ -74,11 +75,40 @@ export default function FancyMultiSelect({ assetsPromise, pageParams: pageParams
     }
   }
 
+  const handleRandomizeCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value)
+    if (!isNaN(value)) {
+      const clampedValue = Math.max(2, Math.min(500, value))
+      setRandomizeCount(clampedValue)
+    }
+  }
+
   return (
     <Flex direction='column' gap='2'>
       <Flex gap='2' justify='end'>
-        <Button size='1' style={{ width: 120 }} onClick={() => setSelected(getRandomElements(assets, 30))}>
-          <ShuffleIcon /> Randomize
+        <TextField.Root type="number" placeholder="Number of assets" 
+          min="2" 
+          max="500"
+          value={randomizeCount}
+          onChange={handleRandomizeCountChange}
+          style={{ 
+            width: 70,
+            // textAlign: 'right',
+          }}
+          size='1'
+          onKeyDown={(e) => {if (e.key === 'Enter') setSelected(getRandomElements(assets, randomizeCount))}}
+        >
+          <TextField.Slot>
+            <Tooltip content="The number of assets output by the Randomize button. Min: 2, Max: 500.">
+              <IconButton variant='ghost' color='gray'>
+                <InfoCircledIcon  height="16" width="16" />
+              </IconButton>
+            </Tooltip>
+          </TextField.Slot>
+        </TextField.Root>
+        <Button size='1' style={{ width: 120 }} onClick={() => setSelected(getRandomElements(assets, randomizeCount))}>
+          <ShuffleIcon />
+           Randomize
         </Button>
         <Button size='1' style={{ width: 120 }} className="!text-red-400 dark:hover:!bg-red-500/20 !bg-neutral-200/10  !border-neutral-700" onClick={() => setSelected([])} variant='surface' color='gray'>
           <Trash2 size={12} /> Clear

@@ -15,6 +15,10 @@ import { fetchAssets, fetchRiskFreeRate } from '~/utils/fetchers'
 export const dynamic = 'force-dynamic'
 // export const runtime = 'edge' 
 
+const DEFAULT_INIT_RANDOM_NUMBER_OF_ASSETS = 100
+
+
+
 const pageParamsSchema = z.object({
   assets: z.array(z.string()).optional().default([]),
   r: z.coerce.number().min(0).transform((v) => (v < 0 ? 0 : v)),
@@ -34,7 +38,7 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
     const params = new URLSearchParams()
     const [assets, riskFreeRate] = await Promise.all([fetchAssets(), fetchRiskFreeRate()])
     console.log("assets and riskFreeRate returned successfully")
-    getRandomElements(assets, 40).forEach((asset) => params.append('assets', asset))
+    getRandomElements(assets, DEFAULT_INIT_RANDOM_NUMBER_OF_ASSETS).forEach((asset) => params.append('assets', asset))
     params.append('r', `${riskFreeRate}`)
     params.append('startYear', `${new Date().getFullYear() - 10}`)
     params.append('endYear', `${new Date().getFullYear()}`)
@@ -82,10 +86,10 @@ export default async function MPTPage({ searchParams }: { searchParams: Promise<
 
         <Flex direction='column' gap='2' className='my-4'>
           <div>
-            <Heading size='3'>Risk free rate</Heading>
+            <Heading size='3'>Goal Return / Risk free rate</Heading>
             <Suspense>
               <Text size='2'>
-                The risk free rate is used to calculate the tangency portfolio. The current yield of the 3-month U.S. Treasury bill is {(100 * (await fetchRiskFreeRate())).toFixed(2)}%.
+                The risk free rate is used to calculate the tangency portfolio. The 3-month U.S. Treasury bill has a current yield of {(100 * (await fetchRiskFreeRate())).toFixed(2)}%.
               </Text>
             </Suspense>
           </div>

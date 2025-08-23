@@ -155,6 +155,10 @@ def calculate_sortino_variance(
 
 
 def calculate_portfolio(R_p, S, q, G, h, A):
+  """
+    Run the quadratic programming solver to compute points on the efficient frontier for a given target return R_p.
+      - https://cvxopt.org/userguide/coneprog.html?highlight=cvxopt%20solvers%20qp#quadratic-programming
+  """
   return solvers.qp(S, q, G, h, A, matrix([R_p, 1.0]))['x']
 
 
@@ -166,6 +170,7 @@ def efficient_frontier_numerical(
   """Calculate the efficient frontier numerically using convex optimization.
 
   This function computes the efficient frontier, in the case that short selling is not allowed, using convex optimization.
+  Wrapping in matrix method allows cvxopt to interface directly with BLAS/LAPACK
 
   Parameters
   ----------
@@ -193,8 +198,13 @@ def efficient_frontier_numerical(
   # Equality constraint
   A = matrix(np.vstack([mu, np.ones(N)]))
 
+  # Debug info
+  cpu_count = os.cpu_count()
+  print(f"Available CPUs: {cpu_count}")
+
   # Parallelize the quadratic optimization step over the R_p linspace
   with ThreadPoolExecutor() as executor:
+    print(f"ThreadPoolExecutor max_workers: {executor._max_workers}")
     portfolios = list(executor.map(partial(calculate_portfolio, S=S, q=q, G=G, h=h, A=A), R_p_linspace))
 
   # Calculate the weights and risks of the portfolios
