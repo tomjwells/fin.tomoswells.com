@@ -1,12 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/u",
-      "destination": "https://suprapayments.io/u"
-    },
-    {
-      "source": "/api/send",
-      "destination": "https://suprapayments.io/api/send"
-    }
+    { "source": "/api/(.*)", "destination": "https://api.fin.tomoswells.com/$1" }
   ]
 }
