@@ -20,6 +20,13 @@ from modules import derivatives
 load_dotenv() 
 logger = logging.getLogger("app")
 
+try:
+    import asyncio, uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except Exception:
+    # Keep default asyncio loop on unsupported platforms, or if uvloop isn't installed
+    pass
+
 
 
 
