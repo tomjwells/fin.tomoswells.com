@@ -25,23 +25,29 @@ The formulae used to find the efficient frontier analytically are derived in [Ma
 
 Python code implementing that algebra to find the efficient frontier and optimal portfolio weights in Python can be found at [./modules/markowitz/main.py](https://github.com/tomjwells/finance/blob/master/modules/markowitz/main.py).
 
+# Repository Structure
+
+The repository is structured to group related code together.
+
+1. `modules` - Contains the more interesting numerical Python algorithms implementing the financial calculations.
+1. `app` - Hosts a Next.js frontend for the application.
+1. `api` - A simple fastapi server acting as the backend for the application (importing from the `modules` directory).
+
 # Running the Project
 
-I have created aliases for common tasks, which are defined in the file `aliases.sh`. 
-
-To load these in your shell, run
+`aliases.sh` contains useful aliases for common tasks. To load these in your shell, run
 ```
 source aliases.sh
 ```
 
-## Flask
+## fastapi
 
-The necessary Python dependencies can be installed using the alias
+Python dependencies can be installed using the alias
 ```
 pyenv
 ```
 
-The flask application may be launched using
+The fastapi application may be launched using
 ```
 runpy
 ```
@@ -51,13 +57,7 @@ making it accessible on port `8000`.
 
 To install dependencies use the alias `i`. To run the application, use the alias `r`.
 
-# Repository Structure
 
-Each subdirectory of this repository serves a different purpose. Understanding the structure will help you quickly find any code you are interested in:
-
-1. `modules` - Contains the Python functions/algorithms implementing the financial calculations.
-1. `app` - Hosts a Next.js frontend for the application.
-2. `api` - A flask server acting as the backend for the application (importing from the `modules` directory).
 
 # Contact
 If you have any questions or suggestions, please feel free to get in touch.

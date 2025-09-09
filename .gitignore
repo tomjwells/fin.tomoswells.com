@@ -2,6 +2,7 @@
 
 *.db
 *.csv
+TODO.md
 NOTES.md
 speedtest.sh
 modules/timeseries
