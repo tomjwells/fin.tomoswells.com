@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://api.fin.tomoswells.com/$1" }
+    { "source": "/api/(.*)", "destination": "https://api.fin.tomoswells.com/api/$1" }
   ]
 }
