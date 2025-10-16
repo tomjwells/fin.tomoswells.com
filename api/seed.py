@@ -157,3 +157,6 @@ def download_data(ticker: str) -> pd.Series:
   import yfinance as yf
   return yf.download(ticker.replace('.', '-'), progress=False)
 
+
+
+
